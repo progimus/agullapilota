@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Prueba 0.3</title>
+        <script src="three.min.js"></script>
+        <script src="OrbitControls.js"></script>
+        <script src="cannon.min.js"></script>
+        
+        <style>
+            body {
+                margin: 0px;
+                overflow: hidden;
+            }
+        </style>
+    </head>
+    <body>
+        <script>
+            
+            var WIDTH,
+                HEIGHT,
+                world,
+                timeStep = 1/60,
+                camera,
+                renderer,
+                controls,
+                light;
+            
+			var left = right = false;
+
+            //Objects
+            var ball, bodyBall;
+            var board, bodyBoard;
+            var stop, bodyStop;
+            var stop2, bodyStop2;
+            var stop3, bodyStop3;
+			var leftPale, bodyLeftPale,
+				rightPale, bodyRightPale;
+            
+            window.onload = () => {
+                initThree();
+                initCannon();
+                animate();
+            }
+            
+            function initThree() {
+                WIDTH = window.innerWidth;
+                HEIGHT = window.innerHeight;
+
+                renderer = new THREE.WebGLRenderer({ antialias: true });
+                renderer.setClearColor(0xbfd1e5);
+                renderer.setSize(WIDTH, HEIGHT);
+                document.body.appendChild(renderer.domElement);
+
+                scene = new THREE.Scene();
+                scene.background = new THREE.Color(0x00ac77);
+
+                camera = new THREE.PerspectiveCamera(70, WIDTH/HEIGHT);
+                camera.position.z = 70;
+                //camera.position.x = 100;
+                scene.add(camera);
+
+                light = new THREE.DirectionalLight(0xFFFFFF, 1, 100);
+                light.position.set(0, 50, 50);
+                scene.add(light);
+                
+                var boardGeometry = new THREE.BoxGeometry(30, 1, 60);
+                var boardMaterial = new THREE.MeshPhongMaterial({ color: 0xE91E63 });
+                board = new THREE.Mesh(boardGeometry, boardMaterial);
+                scene.add(board);
+
+                var ballGeometry = new THREE.SphereGeometry(1, 20, 20);
+                var ballMaterial = new THREE.MeshPhongMaterial({ color: 0xFFFF00 });
+                ball = new THREE.Mesh(ballGeometry, ballMaterial);
+                ball.position.set(0, 50, -23);
+                scene.add(ball);
+                
+                var stopGeometry = new THREE.BoxGeometry(30, 3, 5);
+                var stopMaterial = new THREE.MeshPhongMaterial({ color: 0xFAFAFA });
+                stop = new THREE.Mesh(stopGeometry, stopMaterial);
+                scene.add(stop);
+                
+                var stop2Geometry = new THREE.BoxGeometry(30, 6, 0.5);
+                var sop2Material = new THREE.MeshPhongMaterial({ color: 0xFAFAFA });
+                stop2 = new THREE.Mesh(stop2Geometry, sop2Material);
+                scene.add(stop2);
+                
+                var stop3Geometry = new THREE.BoxGeometry(30, 6, 0.5);
+                var sop3Material = new THREE.MeshPhongMaterial({ color: 0xE0E0E0 });
+                stop3 = new THREE.Mesh(stop3Geometry, sop3Material);
+                scene.add(stop3);
+				
+				var leftPaleGeometry = new THREE.BoxGeometry(6, 2, 1);
+				var leftPaleMaterial = new THREE.MeshPhongMaterial({ color: 0xFF9800 });
+                leftPale = new THREE.Mesh(leftPaleGeometry, leftPaleMaterial);
+                scene.add(leftPale);
+
+                controls = new THREE.OrbitControls(camera);
+            }
+
+            function initCannon() {
+                world = new CANNON.World();
+                world.gravity.set(0, -98, 0);
+                world.broadphase = new CANNON.NaiveBroadphase();
+                world.solver.iterations = 10;
+                
+                // Ball
+                shape = new CANNON.Sphere(1);
+                bodyBall = new CANNON.Body({ mass: 1 });
+                //bodyBall.position.set(0, 50, -23);
+                bodyBall.position.set(0, 50, -23);
+                bodyBall.addShape(shape);
+                world.addBody(bodyBall);
+                
+                // Board                
+                shape = new CANNON.Box(new CANNON.Vec3(15, 0.5, 30));
+                bodyBoard = new CANNON.Body({ mass: 0 });
+                var axis = new CANNON.Vec3(1,0,0);
+                var angle = Math.PI / -0.55;
+                bodyBoard.quaternion.setFromAxisAngle(axis, angle);
+                bodyBoard.addShape(shape);
+                world.addBody(bodyBoard);
+                
+                // Stop (FLOOR)
+                shape = new CANNON.Box(new CANNON.Vec3(15, 1.5, 1.5));
+                bodyStop = new CANNON.Body({ mass: 0 });
+                bodyStop.position.set(0, -20.8, 27.3);
+                bodyStop.addShape(shape);
+                bodyStop.addEventListener("collide", function(e){ 
+                    var axis = new CANNON.Vec3(0,0,1);
+                    var angle = Math.PI / 0.51;
+                    this.quaternion.setFromAxisAngle(axis, angle);
+                });
+                world.addBody(bodyStop);
+                
+                
+                // Stop2 (EXT)
+                shape = new CANNON.Box(new CANNON.Vec3(15, 3, 0.25));
+                bodyStop2 = new CANNON.Body({ mass: 0 });
+                bodyStop2.position.set(0, -19.3, 30);
+                bodyStop2.addShape(shape);
+                world.addBody(bodyStop2);
+                
+                // Stop3 (INT)
+                shape = new CANNON.Box(new CANNON.Vec3(15, 3, 0.25));
+                bodyStop3 = new CANNON.Body({ mass: 0 });
+                bodyStop3.position.set(0, -19.3, 25);
+                bodyStop3.addShape(shape);
+                world.addBody(bodyStop3);
+				
+				// LeftPale
+				shape = new CANNON.Box(new CANNON.Vec3(3, 1, 0.5));
+                bodyLeftPale = new CANNON.Body({ mass: 100 });
+                bodyLeftPale.position.set(-2,-14.5, 25);
+                var axis = new CANNON.Vec3(1,0,0);
+                var angle = Math.PI / -0.55;
+                bodyLeftPale.quaternion.setFromAxisAngle(axis, angle);
+                bodyLeftPale.addShape(shape);
+                world.addBody(bodyLeftPale);
+                var c;
+				document.body.addEventListener("keydown", evt => {
+					if(evt.keyCode == 37) {
+						console.log("left");
+						//bodyLeftPale.angularVelocity.set(0, 200, 110);
+                        console.log(bodyLeftPale.quaternion);
+                        c.setMotorSpeed(10);
+                        c.enableMotor();
+					}
+				});
+				
+				c = new CANNON.HingeConstraint(bodyLeftPale, bodyBoard, {
+                    pivotA: new CANNON.Vec3(-2, -1, -0.5),
+					axisA: new CANNON.Vec3(0,1,0),
+                    pivotB: new CANNON.Vec3( -3, 1, 25),
+                    //pivotB: new CANNON.Vec3( -5, 10, 25),
+					axisB: new CANNON.Vec3(0,1,0)
+				});
+                c.setMotorSpeed(0.1);
+                c.enableMotor();
+                //var c = new CANNON.PointToPointConstraint(bodyLeftPale, new CANNON.Vec3(-3, -1, -0.5), bodyBoard, new CANNON.Vec3(-1, 0, 0));
+				world.addConstraint(c);
+				
+            }
+            
+        
+            
+            function animate() {
+                requestAnimationFrame(animate);
+                updatePhysics();
+                renderer.render(scene, camera);
+                controls.update();
+            }
+            
+            function updatePhysics() {
+                world.step(timeStep);                
+                ball.position.copy(bodyBall.position);
+                ball.quaternion.copy(bodyBall.quaternion);
+                
+                board.position.copy(bodyBoard.position);
+                board.quaternion.copy(bodyBoard.quaternion);
+                
+                stop.position.copy(bodyStop.position);
+                stop.quaternion.copy(bodyStop.quaternion);
+                
+                stop2.position.copy(bodyStop2.position);
+                stop3.position.copy(bodyStop3.position);
+
+                leftPale.position.copy(bodyLeftPale.position);
+                leftPale.quaternion.copy(bodyLeftPale.quaternion);
+            }
+        
+        </script>
+    </body>
+</html>
