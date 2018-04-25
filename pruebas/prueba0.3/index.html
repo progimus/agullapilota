@@ -56,15 +56,15 @@
                 scene.background = new THREE.Color(0x00ac77);
 
                 camera = new THREE.PerspectiveCamera(70, WIDTH/HEIGHT);
-                camera.position.z = 70;
-                //camera.position.x = 100;
+                camera.position.z = 50;
+                camera.position.y = 50;
                 scene.add(camera);
 
                 light = new THREE.DirectionalLight(0xFFFFFF, 1, 100);
-                light.position.set(0, 50, 50);
+                light.position.set(0, 70, 50);
                 scene.add(light);
                 
-                var boardGeometry = new THREE.BoxGeometry(30, 1, 60);
+                var boardGeometry = new THREE.BoxGeometry(30, 2, 60);
                 var boardMaterial = new THREE.MeshPhongMaterial({ color: 0xE91E63 });
                 board = new THREE.Mesh(boardGeometry, boardMaterial);
                 scene.add(board);
@@ -100,24 +100,20 @@
 
             function initCannon() {
                 world = new CANNON.World();
-                world.gravity.set(0, -98, 0);
+                world.gravity.set(0, -98, 50);
                 world.broadphase = new CANNON.NaiveBroadphase();
                 world.solver.iterations = 10;
                 
                 // Ball
                 shape = new CANNON.Sphere(1);
                 bodyBall = new CANNON.Body({ mass: 1 });
-                //bodyBall.position.set(0, 50, -23);
-                bodyBall.position.set(0, 50, -23);
+                bodyBall.position.set(0, 2, -23);
                 bodyBall.addShape(shape);
                 world.addBody(bodyBall);
                 
                 // Board                
-                shape = new CANNON.Box(new CANNON.Vec3(15, 0.5, 30));
+                shape = new CANNON.Box(new CANNON.Vec3(15, 1, 30));
                 bodyBoard = new CANNON.Body({ mass: 0 });
-                var axis = new CANNON.Vec3(1,0,0);
-                var angle = Math.PI / -0.55;
-                bodyBoard.quaternion.setFromAxisAngle(axis, angle);
                 bodyBoard.addShape(shape);
                 world.addBody(bodyBoard);
                 
@@ -150,34 +146,33 @@
 				
 				// LeftPale
 				shape = new CANNON.Box(new CANNON.Vec3(3, 1, 0.5));
-                bodyLeftPale = new CANNON.Body({ mass: 100 });
-                bodyLeftPale.position.set(-2,-14.5, 25);
-                var axis = new CANNON.Vec3(1,0,0);
-                var angle = Math.PI / -0.55;
-                bodyLeftPale.quaternion.setFromAxisAngle(axis, angle);
+                bodyLeftPale = new CANNON.Body({ mass: 50 });
+                bodyLeftPale.position.set(0, 3, 25);
                 bodyLeftPale.addShape(shape);
+                //bodyLeftPale.angularVelocity.set(0, 10, 0);
                 world.addBody(bodyLeftPale);
                 var c;
 				document.body.addEventListener("keydown", evt => {
 					if(evt.keyCode == 37) {
 						console.log("left");
-						//bodyLeftPale.angularVelocity.set(0, 200, 110);
-                        console.log(bodyLeftPale.quaternion);
+						//bodyLeftPale.angularVelocity.set(0, 100, 0);
+                        //bodyLeftPale.applyLocalImpulse(new CANNON.Vec3(0, 0, 100), new CANNON.Vec3(3, 0, 0));
                         c.setMotorSpeed(10);
-                        c.enableMotor();
+                        //c.enableMotor();
 					}
 				});
 				
 				c = new CANNON.HingeConstraint(bodyLeftPale, bodyBoard, {
-                    pivotA: new CANNON.Vec3(-2, -1, -0.5),
+                    pivotA: new CANNON.Vec3(-3, 0, 0),
 					axisA: new CANNON.Vec3(0,1,0),
-                    pivotB: new CANNON.Vec3( -3, 1, 25),
-                    //pivotB: new CANNON.Vec3( -5, 10, 25),
+                    pivotB: new CANNON.Vec3( -4, 2, 25),
 					axisB: new CANNON.Vec3(0,1,0)
 				});
-                c.setMotorSpeed(0.1);
+                c.collideConnected = false;
                 c.enableMotor();
-                //var c = new CANNON.PointToPointConstraint(bodyLeftPale, new CANNON.Vec3(-3, -1, -0.5), bodyBoard, new CANNON.Vec3(-1, 0, 0));
+                
+                console.log(c);
+                
 				world.addConstraint(c);
 				
             }
