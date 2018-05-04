@@ -1,0 +1,67 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Fliper</title>
+        <script src="../../libs/planck.js"></script>
+        <script src="../../libs/planck-with-testbed.js"></script>
+        <!--  -->
+        <!-- <script src="../../temp.js"></script> -->
+        
+        
+        <script type="text/javascript" src="../model.json"></script>
+        
+        <style>
+            body {
+                margin: 0px auto;
+            }
+        </style>
+    </head>
+    <body>
+        <script>
+            planck.testbed("Pinball", function(testbed) {
+                var pl = planck, Vec2 = pl.Vec2;
+                var world = new pl.World(Vec2(0, -40));
+
+                
+                var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true  });
+                ballBody.createFixture(pl.Circle(1), 1);
+                
+                var ground = world.createBody();
+                var leftFlipperBody = world.createDynamicBody({ position: Vec2(-5.28, -42.78), bullet: true  });
+                leftFlipperBody.createFixture(pl.Box(3, 1), 20);
+
+                var optionJoint = {
+                    enableMotor: true,
+                    lowerAngle: -0.52,
+                    upperAngle: 0.52,
+                    enableLimit: true,
+                    collideConnected: false,
+                    maxMotorTorque: 1500000
+                };
+                var joint = world.createJoint(pl.RevoluteJoint(optionJoint, ground, leftFlipperBody, Vec2(-8.28, -42.78)));
+
+                for(var obj of baseGround) {
+                    for(var i = 0; i < obj.lines.length; i += 2) {
+                        console.log('lines');
+                        let index1 = obj.lines[i] * 3;
+                        let index2 = obj.lines[i + 1] * 3;
+                        var x1 = obj.points[index1];
+                        var y1 = obj.points[index1 + 2];
+                        var x2 = obj.points[index2];
+                        var y2 = obj.points[index2 + 2];
+                        ground.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                    }               
+                }
+                
+                testbed.step = function(settings) {
+                    if(testbed.activeKeys.left) {
+                        joint.setMotorSpeed(50);
+                    }
+                    else joint.setMotorSpeed(-50);
+                };
+
+                return world;
+            });
+        </script>
+    </body>
+</html>
