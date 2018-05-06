@@ -27,7 +27,6 @@ io.on('connection', function(socket) {
 		} else {
 			socket.emit('updatePositions', players.player1);
 		}
-		//console.log(players);
 	}, 1000 / 60)
 	socket.on('disconnect', () => {
 		players[socket.player] = null;
@@ -35,7 +34,6 @@ io.on('connection', function(socket) {
 });
 
 function updatePositions(positions, socket) {
-	console.log(positions);
 	players[socket.player] = positions;
 }
 

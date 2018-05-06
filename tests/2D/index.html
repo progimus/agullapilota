@@ -6,10 +6,10 @@
         <script src="../../libs/planck-with-testbed.js"></script>
         <!--  -->
         <!-- <script src="../../temp.js"></script> -->
-        
-        
+
+
         <script type="text/javascript" src="../model.json"></script>
-        
+
         <style>
             body {
                 margin: 0px auto;
@@ -20,13 +20,19 @@
         <script>
             planck.testbed("Pinball", function(testbed) {
                 var pl = planck, Vec2 = pl.Vec2;
-                var world = new pl.World(Vec2(0, -40));
+                var world = new pl.World(Vec2(0, -30));
 
-                
+
+
                 var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true  });
                 ballBody.createFixture(pl.Circle(1), 1);
-                
+
                 var ground = world.createBody();
+                var leftTopRamp = world.createBody();
+                var rightTopRamp = world.createBody();
+                var topesDelBien = world.createBody();
+                var ramp = world.createBody();
+
                 var leftFlipperBody = world.createDynamicBody({ position: Vec2(-5.28, -42.78), bullet: true  });
                 leftFlipperBody.createFixture(pl.Box(3, 1), 20);
 
@@ -42,17 +48,41 @@
 
                 for(var obj of baseGround) {
                     for(var i = 0; i < obj.lines.length; i += 2) {
-                        console.log('lines');
                         let index1 = obj.lines[i] * 3;
                         let index2 = obj.lines[i + 1] * 3;
                         var x1 = obj.points[index1];
                         var y1 = obj.points[index1 + 2];
                         var x2 = obj.points[index2];
                         var y2 = obj.points[index2 + 2];
-                        ground.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-                    }               
+                        if(obj.name == 'left') {
+                            leftTopRamp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        } else if(obj.name == 'right') {
+                            rightTopRamp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        } else if(obj.name == 'rampa') {
+                            ramp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        } else if(obj.name == 'topeR' || obj.name == 'topeL') {
+                            topesDelBien.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        } else {
+                            ground.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        }
+                    }
                 }
-                
+
+                leftTopRamp.m_fixtureList.m_isSensor = true;
+                rightTopRamp.m_fixtureList.m_isSensor = true;
+
+                ramp.setActive(false);
+                topesDelBien.setActive(true);
+
+                world.on('end-contact', (contact, oldManifold) => {
+                    if(contact.getFixtureA() == leftTopRamp.m_fixtureList || contact.getFixtureA() == rightTopRamp.m_fixtureList) {
+                        ramp.setActive(!ramp.isActive());
+                        topesDelBien.setActive(!topesDelBien.isActive());
+                    }
+                });
+
+                //console.log(topsRamp);
+
                 testbed.step = function(settings) {
                     if(testbed.activeKeys.left) {
                         joint.setMotorSpeed(50);
