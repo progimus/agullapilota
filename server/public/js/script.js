@@ -5,10 +5,11 @@ var init = function() {
     var scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
     var camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, -125, 90);
+    //camera.position.set(0, -125, 90);
+    camera.position.set(0, -75, 80);
     camera.lookAt(0, 0, 0);
 
-    var controls = new THREE.OrbitControls(camera);
+    //var controls = new THREE.OrbitControls(camera);
 
     var renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -29,24 +30,25 @@ var init = function() {
         new THREE.SphereGeometry(1.25, 20, 20),
         new THREE.MeshPhongMaterial({ color: 0xfcaf0a })
     );
-    ball.position.set(-7, 0, 1.25)
+    ball.position.set(-7, 0, 1.25);
     scene.add(ball);
 
     var flippers = [];
     //Physics
     pl = planck;
     Vec2 = pl.Vec2;
-    world = new pl.World(Vec2(0, -30));
+    //world = new pl.World(Vec2(0, -50));
+    world = new pl.World(Vec2(0, -10));
 
-    var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true });
+    //var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true });
+    var ballBody = world.createDynamicBody({ position: Vec2(-14.5, 38), bullet: true });
     ballBody.createFixture(pl.Circle(1.25), 1);
 
     var bodys = {};
     baseGround.forEach(e => bodys[e.name] = world.createBody());
-    console.log(bodys);
 
     var heightmapRampaLeft = [];
-    var rampaLeftIsActive = false;
+    var rampaLeftIsActive = true;
 
     //Rampa Right
     var heightmapRampaRight = [];
@@ -93,8 +95,6 @@ var init = function() {
     }
     heightmapRampaLeft.sort((a, b) => a.y1 - b.y1);
     heightmapRampaRight.sort((a, b) => a.y1 - b.y1);
-    //console.table(heightmapRampaLeft);
-    //console.table(heightmapRampaRight);
 
     var filterCategoryBall = 0x0001;
     var filterCategoryGround = 0x0002;
@@ -104,6 +104,7 @@ var init = function() {
 
     ballBody.getFixtureList().m_filterCategoryBits = filterCategoryBall;
     ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+    ballBody.getFixtureList().setRestitution(0.2);
 
     //GroundExt
     let fixture = bodys['groundExt'].getFixtureList();
@@ -175,6 +176,13 @@ var init = function() {
         fixture.setSensor(true);
         fixture = fixture.getNext();
     }
+    //heightmapRampaRight
+    fixture = bodys['heightmapRampaRight'].getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = 0x0032;
+        fixture.setSensor(true);
+        fixture = fixture.getNext();
+    }
 
     world.on('end-contact', (contact, oldManifold) => {
         let bodyA = contact.getFixtureA().getBody();
@@ -205,9 +213,13 @@ var init = function() {
     });
 
     var animate = function () {
+        var ballPosition = ballBody.getPosition();
+        camera.position.set(0, ballPosition.y - 100, 80);
+        camera.lookAt(0, ball.position.y, ball.position.z);
+
         requestAnimationFrame(animate);
         updatePhysics();
-        controls.update();
+        //controls.update();
         renderer.render(scene, camera);
     };
 
