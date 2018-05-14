@@ -8,7 +8,7 @@
 			margin: 0;
 			background-color: #272a36;
 		}
-		canvas { transform: rotate(180deg); }
+		svg { transform: rotate(180deg); }
 		#formContainer {
 			width: 100%;
 			height: 100px;
@@ -26,7 +26,7 @@
 		#formContainer > *:first-child { justify-self: end; }
 		#formContainer > *:last-child { justify-self: start; }
 
-		.button {
+		a, button {
 			padding: 10px 30px;
 			border-radius: 10px;
 			border: none;
@@ -34,7 +34,7 @@
 			color: white;
 		}
 
-		.button:hover {
+		a:hover, button:hover {
 			cursor: pointer;
 			background-color: #393a3f;
 		}
@@ -43,6 +43,7 @@
 
 		#canvasContainer {
 			display: grid;
+			margin: 30px auto;
 			width: 100%;
 			max-width: 1200px;
 			grid-gap: 30px;
@@ -51,18 +52,20 @@
 
 		#canvasContainer > * {
 			justify-self: center;
-			padding: 20px;
 			background-color: #747882;
 			box-shadow: 2px 2px 5px 0 black;
+		}
+
+		label, button {
+			float: left;
+			clear: left;
 		}
 	</style>
 </head>
 <body>
 	<div id="formContainer">
 		<input type="file" id="xmlFileInput" accept=".dae">
-		<button class="button">
-			<a id="downloadLink" >Download</a>
-		</button>
+		<a id="downloadLink" >Download</a>
 	</div>
 	<div id="canvasContainer"></div>
 	<script type="text/javascript">
@@ -71,10 +74,11 @@
 			SCALE = 4,
 			CONV = 39.37008;
 
-		var meshes = [];
+		var meshes;
 
 		window.onload = () => {
 			window.addEventListener('resize', resize);
+
 			var fileInput = document.getElementById('xmlFileInput');
 			fileInput.addEventListener('change', uploadXml);
 		}
@@ -83,24 +87,32 @@
 			var file = evt.target.files[0],
 				reader = new FileReader();
 
-			reader.onload = readXml;
+			reader.onload = processXml;
 
 			reader.readAsText(file);
 		}
 
-		var readXml = evt => {
-			var xml = evt.target.result,
+		var processXml = evt => {
+			var xml = evt.target.result;
+
+			meshes = parseXml(xml);
+
+			displaysSvgs();
+			updateDownloadLink();
+		}
+
+		var parseXml = xml => {
+			var meshes = [],
 				parser = new DOMParser(),
 				doc = parser.parseFromString(xml, 'text/xml');
 
 			var geometries = [...doc.querySelectorAll('library_geometries > geometry > mesh')];
-
 			geometries.forEach((e, i) => {
 				var points = e.querySelector('source > float_array').textContent.split(' ').map(e => e / CONV),
-					lines = e.querySelector('lines > p').textContent.split(' ');
+					lines = [...e.querySelectorAll('lines > p')].map(e => e.textContent ).join(' ').split(' ').map(e => parseInt(e));
 
 				var mesh = {
-					name: 'Object' + i,
+					name: 'object' + i,
 					points: points,
 					lines: lines
 				};
@@ -108,22 +120,96 @@
 				meshes.push(mesh);
 			});
 
-			showMeshes();
+			return meshes;
+		}
+
+		var displaysSvgs = () => {
+			removeSvgs();
+
+			meshes.forEach((mesh, index) => {
+				var div = document.createElement('div'),
+					labelName = document.createElement('label'),
+					inputName = document.createElement('input'),
+					labelJoin = document.createElement('label'),
+					selectJoin = document.createElement('select'),
+					deleteButton = document.createElement('button'),
+					svg = getSvg(index);
+
+				labelName.textContent = 'Obj. Name: ';
+
+				inputName.setAttribute('class', 'objectNameInput');
+				inputName.setAttribute('value', meshes[index].name);
+				inputName.addEventListener('change', updateObjectName);
+
+				labelJoin.textContent = 'Join: ';
+
+				selectJoin.setAttribute('class', 'objectJoinSelect');
+				selectJoin.addEventListener('change', joinSvg);
+				updateSelectJoin(selectJoin);
+
+				deleteButton.textContent = 'Delete';
+				deleteButton.addEventListener('click', removeMesh);
+
+				svg.addEventListener('click', zoom);
+
+				div.appendChild(labelName);
+				div.appendChild(inputName);
+				div.appendChild(labelJoin);
+				div.appendChild(selectJoin);
+				div.appendChild(deleteButton);
+				div.appendChild(svg);
+
+				document.getElementById('canvasContainer').appendChild(div);
+			});
+
+			resize();
+		}
+
+		var updateSelectJoin = select => {
+			select.removeChildrens();
+
+			meshes.map(e => e.name)
+				.forEach(e => {
+					var option = document.createElement('option'),
+						text = document.createTextNode(e);
+
+					option.setAttribute('value', e);
+					option.appendChild(text);
+					select.appendChild(option);
+				});
+		}
+
+		var joinSvg = evt => {
+			var currName = evt.target.parentNode.querySelector('.objectNameInput').value,
+				joinName = evt.target.value,
+				currIndex = meshes.findIndex(e => e.name == currName),
+				joinIndex = meshes.findIndex(e => e.name == joinName),
+				currMesh = meshes[currIndex],
+				joinMesh = meshes[joinIndex];
+
+			var max = Math.max(...meshes[currIndex].lines) + 1;
+			meshes[currIndex].points = currMesh.points.concat(joinMesh.points);
+			meshes[currIndex].lines = currMesh.lines.concat(joinMesh.lines.map(e => e + max));
+			meshes.splice(joinIndex, 1);
+
+			displaysSvgs();
 			updateDownloadLink();
 		}
 
-		var showMeshes = () => {
+		Element.prototype.removeChildrens = function() {
+			while(this.firstChild) this.removeChild(this.firstChild);
+		}
+
+		var getSvg = selected => {
+			var uri = 'http://www.w3.org/2000/svg',
+				svg = document.createElementNS(uri, 'svg');
+
 			meshes.forEach((mesh, index) => {
 				var points = mesh.points,
 					lines = mesh.lines;
-				var div = document.createElement('div'),
-					label = document.createElement('label'),
-					input = document.createElement('input'),
-					canvas = document.createElement('canvas'),
-					ctx = canvas.getContext('2d');
 
-				canvas.width = WIDTH * SCALE;
-				canvas.height = HEIGHT * SCALE;
+				svg.setAttribute('width', WIDTH * SCALE);
+				svg.setAttribute('height', HEIGHT * SCALE);
 
 				for(var i = 0; i < lines.length; i += 2) {
 					var point1 = lines[i] * 3,
@@ -134,45 +220,57 @@
 						x2 = (points[point2] + WIDTH / 2) * SCALE,
 						y2 = (points[point2 + 2] + HEIGHT / 2) * SCALE;
 
-					//console.log(point1 / 3 + " - " + point2 / 3);
-					//console.log(x1 + ", " + y1 + " - " + x2 + ", " + y2);
-
-					ctx.beginPath();
-					ctx.moveTo(x1, y1);
-					ctx.lineTo(x2, y2);
-					ctx.stroke();
+					var line = document.createElementNS(uri, 'line');
+					line.setAttribute('x1', x1);
+					line.setAttribute('y1', y1);
+					line.setAttribute('x2', x2);
+					line.setAttribute('y2', y2);
+					line.setAttribute('stroke', selected == index ? 'red' : 'black');
+					svg.appendChild(line);
 				}
-
-				label.textContent = 'Obj. Name: ';
-				div.appendChild(label);
-				input.setAttribute('id', 'objectNameInput' + index);
-				input.setAttribute('value', meshes[index].name);
-				input.addEventListener('change', updateObjectName);
-				div.appendChild(input);
-				div.appendChild(canvas);
-				document.getElementById('canvasContainer').appendChild(div);
 			});
-			resize();
+
+			return svg;
+		}
+
+		var removeSvgs = () => {
+			var container = document.getElementById('canvasContainer');
+			container.removeChildrens();
+		}
+
+		var removeMesh = evt => {
+			var name = evt.target.parentNode.querySelector('.objectNameInput').value,
+				index = meshes.findIndex(e => e.name == name);
+
+			meshes.splice(index, 1);
+
+			displaysSvgs();
 		}
 
 		var updateDownloadLink = () => {
 			var link = document.getElementById('downloadLink'),
-				content = JSON.stringify(meshes);
+				content = 'var baseGround2 = ' + JSON.stringify(meshes) + ';';
 			link.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(content));
 			link.setAttribute('download', 'model.json');
 		}
 
 		var updateObjectName = evt => {
-			var index = evt.target.id.match(/\d/)[0];
-			meshes[index].name = evt.target.value;
+			var inputs = document.querySelectorAll('.objectNameInput'),
+				name = evt.target.value,
+				index = [...inputs].findIndex(e => e.value == name);
 
+			meshes[index].name = evt.target.value;
 			updateDownloadLink();
+		}
+
+		var zoom = evt => {
+
 		}
 
 		var resize = () => {
 			var canvasContainer = document.getElementById('canvasContainer'),
 				repeat = Math.floor(canvasContainer.offsetWidth / (WIDTH * SCALE));
-			console.log(repeat);
+
 			canvasContainer.style.gridTemplateColumns = 'repeat(' + repeat + ', auto)';
 		}
 	</script>

@@ -20,18 +20,39 @@
         <script>
             planck.testbed("Pinball", function(testbed) {
                 var pl = planck, Vec2 = pl.Vec2;
-                var world = new pl.World(Vec2(0, -30));
+                var world = new pl.World(Vec2(0, 0));
 
 
 
                 var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true  });
-                ballBody.createFixture(pl.Circle(1), 1);
+                ballBody.createFixture(pl.Circle(1.25), 1);
 
-                var ground = world.createBody();
-                var leftTopRamp = world.createBody();
-                var rightTopRamp = world.createBody();
-                var topesDelBien = world.createBody();
-                var ramp = world.createBody();
+                var ballBody2 = world.createDynamicBody({ position: Vec2(-7, 0), bullet: true  });
+                ballBody2.createFixture(pl.Circle(1.25), 1);
+
+                var groundExt = world.createBody();
+                var groundInt = world.createBody();
+                var pelotas = world.createBody();
+                var triangulos = world.createBody();
+                var tronchos = world.createBody();
+
+                //Lanzadera
+                var lanzadera = world.createBody();
+                var lanzaderaSensor = world.createBody();
+
+                //Rampa Left
+                var entradaRampaLeftSensor = world.createBody();
+                var salidaRampaLeftSensor = world.createBody();
+                var rampaLeft = world.createBody();
+                var heightmapRampaLeft = [];
+                var rampaLeftIsActive = false;
+
+                //Rampa Right
+                var entradaRampaRightSensor = world.createBody();
+                var salidaRampaRightSensor = world.createBody();
+                var rampaRight = world.createBody();
+                var heightmapRampaRight = [];
+                var rampaRightIsActive = false;
 
                 var leftFlipperBody = world.createDynamicBody({ position: Vec2(-5.28, -42.78), bullet: true  });
                 leftFlipperBody.createFixture(pl.Box(3, 1), 20);
@@ -44,7 +65,7 @@
                     collideConnected: false,
                     maxMotorTorque: 1500000
                 };
-                var joint = world.createJoint(pl.RevoluteJoint(optionJoint, ground, leftFlipperBody, Vec2(-8.28, -42.78)));
+                var joint = world.createJoint(pl.RevoluteJoint(optionJoint, groundExt, leftFlipperBody, Vec2(-8.28, -42.78)));
 
                 for(var obj of baseGround) {
                     for(var i = 0; i < obj.lines.length; i += 2) {
@@ -54,34 +75,122 @@
                         var y1 = obj.points[index1 + 2];
                         var x2 = obj.points[index2];
                         var y2 = obj.points[index2 + 2];
-                        if(obj.name == 'left') {
-                            leftTopRamp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-                        } else if(obj.name == 'right') {
-                            rightTopRamp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-                        } else if(obj.name == 'rampa') {
-                            ramp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-                        } else if(obj.name == 'topeR' || obj.name == 'topeL') {
-                            topesDelBien.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-                        } else {
-                            ground.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-                        }
+                        if(obj.name == 'groundExt') groundExt.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'groundInt') groundInt.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'pelotas') pelotas.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'triangulos') triangulos.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'tronchos') tronchos.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'rampaLeft') rampaLeft.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'entradaRampaLeft') entradaRampaLeftSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'salidaRampaLeft') salidaRampaLeftSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'rampaRight') rampaRight.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'entradaRampaRight') entradaRampaRightSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'salidaRampaRight') salidaRampaRightSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'lanzadera') lanzadera.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+                        if(obj.name == 'lanzaderaSalida') lanzaderaSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
                     }
                 }
 
-                leftTopRamp.m_fixtureList.m_isSensor = true;
-                rightTopRamp.m_fixtureList.m_isSensor = true;
+                var filterCategoryBall = 0x0001;
+                var filterCategoryGround = 0x0002;
+                var filterCategoryRamp = 0x0004;
+                var filterCategorySensor =  0x0008;
+                var filterCategoryLanzadera = 0x0016;
 
-                ramp.setActive(false);
-                topesDelBien.setActive(true);
+                ballBody.getFixtureList().m_filterCategoryBits = filterCategoryBall;
+                ballBody2.getFixtureList().m_filterCategoryBits = filterCategoryBall;
+                ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                ballBody2.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+
+                //GroundExt
+                let fixture = groundExt.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryGround;
+                    fixture = fixture.getNext();
+                }
+                //GroundInt
+                fixture = groundInt.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryGround;
+                    fixture = fixture.getNext();
+                }
+                //Pelotas
+                fixture = pelotas.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryGround;
+                    fixture = fixture.getNext();
+                }
+                //Triangulos
+                fixture = triangulos.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryGround;
+                    fixture = fixture.getNext();
+                }
+                //Tronchos
+                fixture = tronchos.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryGround;
+                    fixture = fixture.getNext();
+                }
+                //RampaLeft
+                fixture = rampaLeft.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryRamp;
+                    fixture = fixture.getNext();
+                }
+                //RampaRight
+                fixture = rampaRight.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryRamp;
+                    fixture = fixture.getNext();
+                }
+                //entradaRampaLeftSensor
+                fixture = entradaRampaLeftSensor.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategorySensor;
+                    fixture.setSensor(true);
+                    fixture = fixture.getNext();
+                }
+                //entradaRampaRightSensor
+                fixture = entradaRampaRightSensor.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategorySensor;
+                    fixture.setSensor(true);
+                    fixture = fixture.getNext();
+                }
+                //salidaRampaLeftSensor
+                fixture = salidaRampaLeftSensor.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategorySensor;
+                    fixture.setSensor(true);
+                    fixture = fixture.getNext();
+                }
+                //salidaRampaRightSensor
+                fixture = salidaRampaRightSensor.getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategorySensor;
+                    fixture.setSensor(true);
+                    fixture = fixture.getNext();
+                }
 
                 world.on('end-contact', (contact, oldManifold) => {
-                    if(contact.getFixtureA() == leftTopRamp.m_fixtureList || contact.getFixtureA() == rightTopRamp.m_fixtureList) {
-                        ramp.setActive(!ramp.isActive());
-                        topesDelBien.setActive(!topesDelBien.isActive());
+                    let bodyA = contact.getFixtureA().getBody();
+                    let bodyEntradaLeft = entradaRampaLeftSensor.getFixtureList().getBody();
+                    let bodySalidaLeft = salidaRampaLeftSensor.getFixtureList().getBody();
+                    let bodyEntradaRight = entradaRampaRightSensor.getFixtureList().getBody();
+                    let bodySalidaRight = salidaRampaRightSensor.getFixtureList().getBody();
+                    if(bodyA == bodyEntradaLeft || bodyA == bodySalidaLeft || bodyA == bodyEntradaRight || bodyA == bodySalidaRight) {
+                        let velY = contact.getFixtureB().getBody().getLinearVelocity();
+                        let actualBall = contact.getFixtureB();
+                        if(bodyA == bodyEntradaLeft || bodyA == bodyEntradaRight) {
+                            if(velY.y > 0) actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryRamp | filterCategorySensor;
+                            else actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                        } else {
+                            actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                        }
+                        actualBall.refilter();
                     }
                 });
-
-                //console.log(topsRamp);
 
                 testbed.step = function(settings) {
                     if(testbed.activeKeys.left) {

@@ -4,8 +4,8 @@ var init = function() {
     //THREE
     var scene = new THREE.Scene();
     scene.background = new THREE.Color(0x000000);
-    var camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(0, -125, 125);
+    var camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, -125, 90);
     camera.lookAt(0, 0, 0);
 
     var controls = new THREE.OrbitControls(camera);
@@ -16,20 +16,20 @@ var init = function() {
     document.body.appendChild( renderer.domElement );
 
     var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
-    light.position.set(0, 50, 100);
+    light.position.set(0, -125, 75);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff, 0.3));
 
     var loader = new THREE.ColladaLoader();
-    loader.load("models/model.dae", function(collada) {
+    loader.load("models/supreme.dae", function(collada) {
         scene.add(collada.scene);
     });
 
     var ball = new THREE.Mesh(
-        new THREE.SphereGeometry(1, 20, 20),
+        new THREE.SphereGeometry(1.25, 20, 20),
         new THREE.MeshPhongMaterial({ color: 0xfcaf0a })
     );
-    ball.position.set(-7, 0, 1)
+    ball.position.set(-7, 0, 1.25)
     scene.add(ball);
 
     var flippers = [];
@@ -38,18 +38,39 @@ var init = function() {
     Vec2 = pl.Vec2;
     world = new pl.World(Vec2(0, -30));
 
-    var ballBody = world.createDynamicBody({ position: Vec2(-7, 0), bullet: true });
-    ballBody.createFixture(pl.Circle(1), 1);
+    var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true });
+    ballBody.createFixture(pl.Circle(1.25), 1);
 
-    var ground = world.createBody();
-    var leftTopRamp = world.createBody();
-    var rightTopRamp = world.createBody();
-    var topesDelBien = world.createBody();
-    var ramp = world.createBody();
-    var heightmap = [];
+    var groundExt = world.createBody();
+    var groundInt = world.createBody();
+    var pelotas = world.createBody();
+    var triangulos = world.createBody();
+    var tronchos = world.createBody();
 
-    flippers.push(createFlipper(true, new THREE.Vector3(-8.28, -42.78, 1.5), ground, scene, world, pl, Vec2));
-    flippers.push(createFlipper(false, new THREE.Vector3(8.28, -42.78, 1.5), ground, scene, world, pl, Vec2));
+    //Lanzadera
+    var lanzadera = world.createBody();
+    var lanzaderaSensor = world.createBody();
+
+    //Rampa Left
+    var entradaRampaLeftSensor = world.createBody();
+    var salidaRampaLeftSensor = world.createBody();
+    var rampaLeft = world.createBody();
+    var heightmapRampaLeft = [];
+    var rampaLeftIsActive = false;
+
+    //Rampa Right
+    var entradaRampaRightSensor = world.createBody();
+    var salidaRampaRightSensor = world.createBody();
+    var rampaRight = world.createBody();
+    var heightmapRampaRight = [];
+    var rampaRightIsActive = false;
+
+    var onTheTop = false;
+    var theTop = 8.5;
+
+    //8.73, 36.5
+    flippers.push(createFlipper(true, new THREE.Vector3(-8.73, -36.5, 1), groundInt, scene, world, pl, Vec2));
+    flippers.push(createFlipper(false, new THREE.Vector3(8.73, -36.5, 1), groundInt, scene, world, pl, Vec2));
 
     for(var obj of baseGround) {
         for(var i = 0; i < obj.lines.length; i += 2) {
@@ -59,22 +80,28 @@ var init = function() {
             var y1 = obj.points[index1 + 2];
             var x2 = obj.points[index2];
             var y2 = obj.points[index2 + 2];
-            if(obj.name == 'left') {
-                leftTopRamp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            } else if(obj.name == 'right') {
-                rightTopRamp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            } else if(obj.name == 'rampa') {
-                ramp.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            } else if(obj.name == 'topeR' || obj.name == 'topeL') {
-                topesDelBien.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            } else {
-                ground.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            }
+            if(obj.name == 'groundExt') groundExt.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'groundInt') groundInt.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'pelotas') pelotas.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'triangulos') triangulos.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'tronchos') tronchos.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'rampaLeft') rampaLeft.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'entradaRampaLeft') entradaRampaLeftSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'salidaRampaLeft') salidaRampaLeftSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'rampaRight') rampaRight.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'entradaRampaRight') entradaRampaRightSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'salidaRampaRight') salidaRampaRightSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'lanzadera') lanzadera.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name == 'lanzaderaSalida') lanzaderaSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
         }
-        if(obj.name == 'rampa') {
+        if(obj.name == 'heightmapRampaLeft' || obj.name == 'heightmapRampaRight') {
             for(var i = 0; i < obj.lines.length; i += 2) {
                 let index1 = obj.lines[i] * 3;
                 let index2 = obj.lines[i + 1] * 3;
+                if(obj.points[index1 + 2] > obj.points[index2 + 2]) {
+                    index2 = obj.lines[i] * 3;
+                    index1 = obj.lines[i + 1] * 3;
+                }
                 var point = {
                     x1: obj.points[index1],
                     z1: obj.points[index1 + 1],
@@ -83,27 +110,123 @@ var init = function() {
                     z2: obj.points[index2 + 1],
                     y2: obj.points[index2 + 2]
                 };
-                heightmap.push(point);
+                if(obj.name == 'heightmapRampaLeft') heightmapRampaLeft.push(point);
+                else heightmapRampaRight.push(point);
             }
         }
     }
-    heightmap.sort((a, b) => a.y1 - b.y1);
-    ballBody.getFixtureList().setRestitution(0.3);
+    heightmapRampaLeft.sort((a, b) => a.y1 - b.y1);
+    heightmapRampaRight.sort((a, b) => a.y1 - b.y1);
+    console.table(heightmapRampaLeft);
+    console.table(heightmapRampaRight);
 
-    leftTopRamp.m_fixtureList.m_isSensor = true;
-    rightTopRamp.m_fixtureList.m_isSensor = true;
+    var filterCategoryBall = 0x0001;
+    var filterCategoryGround = 0x0002;
+    var filterCategoryRamp = 0x0004;
+    var filterCategorySensor =  0x0008;
+    var filterCategoryLanzadera = 0x0016;
 
-    ramp.setActive(false);
-    topesDelBien.setActive(true);
+    ballBody.getFixtureList().m_filterCategoryBits = filterCategoryBall;
+    ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+
+    //GroundExt
+    let fixture = groundExt.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryGround;
+        fixture = fixture.getNext();
+    }
+    //GroundInt
+    fixture = groundInt.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryGround;
+        fixture = fixture.getNext();
+    }
+    //Pelotas
+    fixture = pelotas.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryGround;
+        fixture = fixture.getNext();
+    }
+    //Triangulos
+    fixture = triangulos.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryGround;
+        fixture = fixture.getNext();
+    }
+    //Tronchos
+    fixture = tronchos.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryGround;
+        fixture = fixture.getNext();
+    }
+    //RampaLeft
+    fixture = rampaLeft.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryRamp;
+        fixture = fixture.getNext();
+    }
+    //RampaRight
+    fixture = rampaRight.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategoryRamp;
+        fixture = fixture.getNext();
+    }
+    //entradaRampaLeftSensor
+    fixture = entradaRampaLeftSensor.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategorySensor;
+        fixture.setSensor(true);
+        fixture = fixture.getNext();
+    }
+    //entradaRampaRightSensor
+    fixture = entradaRampaRightSensor.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategorySensor;
+        fixture.setSensor(true);
+        fixture = fixture.getNext();
+    }
+    //salidaRampaLeftSensor
+    fixture = salidaRampaLeftSensor.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategorySensor;
+        fixture.setSensor(true);
+        fixture = fixture.getNext();
+    }
+    //salidaRampaRightSensor
+    fixture = salidaRampaRightSensor.getFixtureList();
+    while(fixture != null) {
+        fixture.m_filterCategoryBits = filterCategorySensor;
+        fixture.setSensor(true);
+        fixture = fixture.getNext();
+    }
 
     world.on('end-contact', (contact, oldManifold) => {
-        if(contact.getFixtureA() == leftTopRamp.m_fixtureList || contact.getFixtureA() == rightTopRamp.m_fixtureList) {
-            ramp.setActive(!ramp.isActive());
-            topesDelBien.setActive(!topesDelBien.isActive());
+        let bodyA = contact.getFixtureA().getBody();
+        let bodyEntradaLeft = entradaRampaLeftSensor.getFixtureList().getBody();
+        let bodySalidaLeft = salidaRampaLeftSensor.getFixtureList().getBody();
+        let bodyEntradaRight = entradaRampaRightSensor.getFixtureList().getBody();
+        let bodySalidaRight = salidaRampaRightSensor.getFixtureList().getBody();
+        if(bodyA == bodyEntradaLeft || bodyA == bodySalidaLeft || bodyA == bodyEntradaRight || bodyA == bodySalidaRight) {
+            let velY = contact.getFixtureB().getBody().getLinearVelocity();
+            let actualBall = contact.getFixtureB();
+            if(bodyA == bodyEntradaLeft || bodyA == bodyEntradaRight) {
+                rampaLeftIsActive = bodyA == bodyEntradaLeft ? true : false;
+                rampaRightIsActive = bodyA == bodyEntradaRight ? true : false;
+                if(velY.y > 0) {
+                    actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryRamp | filterCategorySensor;
+                } else {
+                    [rampaLeftIsActive, rampaRightIsActive] = [false, false];
+                    actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                    onTheTop = false;
+                }
+            } else {
+                [rampaLeftIsActive, rampaRightIsActive] = [false, false];
+                actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                onTheTop = false;
+            }
+            actualBall.refilter();
         }
     });
-
-
 
     var animate = function () {
         requestAnimationFrame(animate);
@@ -137,22 +260,35 @@ var init = function() {
         var ballPosition = ballBody.getPosition();
         ball.position.x = ballPosition.x;
         ball.position.y = ballPosition.y;
-
         let salir = false;
-        if(ramp.isActive()) {
+        if(rampaLeftIsActive || rampaRightIsActive) {
+            let heightmap = rampaLeftIsActive ? heightmapRampaLeft : heightmapRampaRight;
             for(position of heightmap) {
                 if(salir == false) {
-                    if(position.y1 < ball.position.y && position.y2 > ball.position.y) {
+                    if(!onTheTop) {
+                        if(position.y1 < ball.position.y && position.y2 > ball.position.y) {
+                            salir = true;
+                            let distance = Math.abs(position.y2 - position.y1);
+                            let distance2 = Math.abs(position.y1 - (ballPosition.y + 0.5));
+                            let porcentaje = distance2 / distance;
+                            let lol =  Math.abs(position.z1 - position.z2);
+                            let z = position.z1 - (lol * porcentaje);
+                            //console.log(ballPosition.y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
+                            ball.position.z = -z + 1;
+                            console.log(-z + 1);
+                        }
+                    } else {
                         salir = true;
-                        let distance = Math.abs(position.y2 - position.y1);
-                        let distance2 = Math.abs(position.y1 - (ballPosition.y + 0.5));
-                        let porcentaje = distance2 / distance;
-                        let lol =  Math.abs(position.z1 - position.z2);
-                        let z = position.z1 - (lol * porcentaje);
-                        //console.log(ballPosition.y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
-                        ball.position.z = -z + 1;
+                        ball.position.z = theTop;
                     }
                 }
+            }
+            if(salir == false) onTheTop = true;
+        } else {
+            if(ball.position.z > 1.25) {
+                ball.position.z -= 0.50;
+            } else {
+                ball.position.z = 1.25;
             }
         }
     }
