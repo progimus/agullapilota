@@ -41,27 +41,14 @@ var init = function() {
     var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true });
     ballBody.createFixture(pl.Circle(1.25), 1);
 
-    var groundExt = world.createBody();
-    var groundInt = world.createBody();
-    var pelotas = world.createBody();
-    var triangulos = world.createBody();
-    var tronchos = world.createBody();
+    var bodys = {};
+    baseGround.forEach(e => bodys[e.name] = world.createBody());
+    console.log(bodys);
 
-    //Lanzadera
-    var lanzadera = world.createBody();
-    var lanzaderaSensor = world.createBody();
-
-    //Rampa Left
-    var entradaRampaLeftSensor = world.createBody();
-    var salidaRampaLeftSensor = world.createBody();
-    var rampaLeft = world.createBody();
     var heightmapRampaLeft = [];
     var rampaLeftIsActive = false;
 
     //Rampa Right
-    var entradaRampaRightSensor = world.createBody();
-    var salidaRampaRightSensor = world.createBody();
-    var rampaRight = world.createBody();
     var heightmapRampaRight = [];
     var rampaRightIsActive = false;
 
@@ -69,8 +56,8 @@ var init = function() {
     var theTop = 8.5;
 
     //8.73, 36.5
-    flippers.push(createFlipper(true, new THREE.Vector3(-8.73, -36.5, 1), groundInt, scene, world, pl, Vec2));
-    flippers.push(createFlipper(false, new THREE.Vector3(8.73, -36.5, 1), groundInt, scene, world, pl, Vec2));
+    flippers.push(createFlipper(true, new THREE.Vector3(-8.73, -36.5, 1), bodys['groundInt'], scene, world, pl, Vec2));
+    flippers.push(createFlipper(false, new THREE.Vector3(8.73, -36.5, 1), bodys['groundInt'], scene, world, pl, Vec2));
 
     for(var obj of baseGround) {
         for(var i = 0; i < obj.lines.length; i += 2) {
@@ -80,20 +67,9 @@ var init = function() {
             var y1 = obj.points[index1 + 2];
             var x2 = obj.points[index2];
             var y2 = obj.points[index2 + 2];
-            if(obj.name == 'groundExt') groundExt.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'groundInt') groundInt.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'pelotas') pelotas.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'triangulos') triangulos.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'tronchos') tronchos.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'rampaLeft') rampaLeft.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'entradaRampaLeft') entradaRampaLeftSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'salidaRampaLeft') salidaRampaLeftSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'rampaRight') rampaRight.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'entradaRampaRight') entradaRampaRightSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'salidaRampaRight') salidaRampaRightSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'lanzadera') lanzadera.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
-            if(obj.name == 'lanzaderaSalida') lanzaderaSensor.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            bodys[obj.name].createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
         }
+
         if(obj.name == 'heightmapRampaLeft' || obj.name == 'heightmapRampaRight') {
             for(var i = 0; i < obj.lines.length; i += 2) {
                 let index1 = obj.lines[i] * 3;
@@ -117,8 +93,8 @@ var init = function() {
     }
     heightmapRampaLeft.sort((a, b) => a.y1 - b.y1);
     heightmapRampaRight.sort((a, b) => a.y1 - b.y1);
-    console.table(heightmapRampaLeft);
-    console.table(heightmapRampaRight);
+    //console.table(heightmapRampaLeft);
+    //console.table(heightmapRampaRight);
 
     var filterCategoryBall = 0x0001;
     var filterCategoryGround = 0x0002;
@@ -130,70 +106,70 @@ var init = function() {
     ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
 
     //GroundExt
-    let fixture = groundExt.getFixtureList();
+    let fixture = bodys['groundExt'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryGround;
         fixture = fixture.getNext();
     }
     //GroundInt
-    fixture = groundInt.getFixtureList();
+    fixture = bodys['groundInt'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryGround;
         fixture = fixture.getNext();
     }
     //Pelotas
-    fixture = pelotas.getFixtureList();
+    fixture = bodys['pelotas'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryGround;
         fixture = fixture.getNext();
     }
     //Triangulos
-    fixture = triangulos.getFixtureList();
+    fixture = bodys['triangulos'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryGround;
         fixture = fixture.getNext();
     }
     //Tronchos
-    fixture = tronchos.getFixtureList();
+    fixture = bodys['tronchos'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryGround;
         fixture = fixture.getNext();
     }
     //RampaLeft
-    fixture = rampaLeft.getFixtureList();
+    fixture = bodys['rampaLeft'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryRamp;
         fixture = fixture.getNext();
     }
     //RampaRight
-    fixture = rampaRight.getFixtureList();
+    fixture = bodys['rampaRight'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategoryRamp;
         fixture = fixture.getNext();
     }
     //entradaRampaLeftSensor
-    fixture = entradaRampaLeftSensor.getFixtureList();
+    fixture = bodys['entradaRampaLeftSensor'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategorySensor;
         fixture.setSensor(true);
         fixture = fixture.getNext();
     }
     //entradaRampaRightSensor
-    fixture = entradaRampaRightSensor.getFixtureList();
+    fixture = bodys['entradaRampaRightSensor'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategorySensor;
         fixture.setSensor(true);
         fixture = fixture.getNext();
     }
     //salidaRampaLeftSensor
-    fixture = salidaRampaLeftSensor.getFixtureList();
+    fixture = bodys['salidaRampaLeftSensor'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategorySensor;
         fixture.setSensor(true);
         fixture = fixture.getNext();
     }
     //salidaRampaRightSensor
-    fixture = salidaRampaRightSensor.getFixtureList();
+    fixture = bodys['salidaRampaRightSensor'].getFixtureList();
     while(fixture != null) {
         fixture.m_filterCategoryBits = filterCategorySensor;
         fixture.setSensor(true);
@@ -202,10 +178,10 @@ var init = function() {
 
     world.on('end-contact', (contact, oldManifold) => {
         let bodyA = contact.getFixtureA().getBody();
-        let bodyEntradaLeft = entradaRampaLeftSensor.getFixtureList().getBody();
-        let bodySalidaLeft = salidaRampaLeftSensor.getFixtureList().getBody();
-        let bodyEntradaRight = entradaRampaRightSensor.getFixtureList().getBody();
-        let bodySalidaRight = salidaRampaRightSensor.getFixtureList().getBody();
+        let bodyEntradaLeft = bodys['entradaRampaLeftSensor'].getFixtureList().getBody();
+        let bodySalidaLeft = bodys['salidaRampaLeftSensor'].getFixtureList().getBody();
+        let bodyEntradaRight = bodys['entradaRampaRightSensor'].getFixtureList().getBody();
+        let bodySalidaRight = bodys['salidaRampaRightSensor'].getFixtureList().getBody();
         if(bodyA == bodyEntradaLeft || bodyA == bodySalidaLeft || bodyA == bodyEntradaRight || bodyA == bodySalidaRight) {
             let velY = contact.getFixtureB().getBody().getLinearVelocity();
             let actualBall = contact.getFixtureB();
@@ -235,7 +211,7 @@ var init = function() {
         renderer.render(scene, camera);
     };
 
-    [flippers.left, flippers.right] = [false, false];
+    flippers.left = flippers.right = false;
 
     document.body.addEventListener("keydown", evt => {
         if(evt.keyCode == 37 || evt.keyCode == 65) flippers.left = true;
@@ -275,7 +251,7 @@ var init = function() {
                             let z = position.z1 - (lol * porcentaje);
                             //console.log(ballPosition.y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
                             ball.position.z = -z + 1;
-                            console.log(-z + 1);
+                            //console.log(-z + 1);
                         }
                     } else {
                         salir = true;
