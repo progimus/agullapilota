@@ -1,0 +1,10 @@
+	TO DO
+-------------
+
+- Mirar si se puede importar THREE en el js y no en el index (require)
+- Mirar si es mejor crear un modulo o seguir con el custom.js
+- Solucionar la funcion start (si es coherente)
+- Mirar si es necesario el this.type en las camaras y las luces
+- Solucionar problema con la clase camara
+- Crear la grabedad en los tres ejes
+- Hacer algo para no tener que declarar las variables pl y vec2 todo el rato

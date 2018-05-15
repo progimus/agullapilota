@@ -7,15 +7,16 @@ var init = function() {
     var camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, -125, 90);
     camera.lookAt(0, 0, 0);
-
     var controls = new THREE.OrbitControls(camera);
+
+    console.log(camera);
 
     var renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.body.appendChild( renderer.domElement );
 
-    var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
+    var light = new THREE.DirectionalLight( 0xffffff, 1);
     light.position.set(0, -125, 75);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff, 0.3));

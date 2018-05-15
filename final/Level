@@ -1,0 +1,45 @@
+Level
+	name
+	dificulty
+	objects
+
+Object
+	id
+	dae
+	type
+	bodys
+
+body
+	type: 'ball | flipper | static'
+	fixtures
+
+fixture
+	type
+	bouncing
+
+
+
+Game
+	id
+	players: []
+	board: []
+
+Player
+	id
+	name
+	flippers: []
+	lives: []
+
+
+Camera
+	position: Vect3
+	//Posicion desde la que sigue la pelota
+	follow: {
+		objectId //Id del objecto al que sigue
+		position: Vect3 //posicion desde la que lo sigue
+	}
+
+Light
+	type
+	position
+	
