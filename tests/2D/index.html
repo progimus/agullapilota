@@ -24,7 +24,8 @@
 
 
 
-                var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true  });
+                //var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true  });
+                var ballBody = world.createDynamicBody({ position: Vec2(23, -45), bullet: true  });
                 ballBody.createFixture(pl.Circle(1.25), 1);
 
                 var ballBody2 = world.createDynamicBody({ position: Vec2(-7, 0), bullet: true  });
@@ -32,7 +33,6 @@
 
                 var bodys = {};
                 baseGround.forEach(e => bodys[e.name] = world.createBody());
-                console.log(bodys);
 
                 var leftFlipperBody = world.createDynamicBody({ position: Vec2(-5.28, -42.78), bullet: true  });
                 leftFlipperBody.createFixture(pl.Box(3, 1), 20);
@@ -63,12 +63,16 @@
                 var filterCategoryGround = 0x0002;
                 var filterCategoryRamp = 0x0004;
                 var filterCategorySensor =  0x0008;
-                var filterCategoryLanzadera = 0x0016;
+                var filterCategoryLanzadera = 0x0010;
+
+                console.log(filterCategoryLanzadera);
 
                 ballBody.getFixtureList().m_filterCategoryBits = filterCategoryBall;
                 ballBody2.getFixtureList().m_filterCategoryBits = filterCategoryBall;
-                ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
-                ballBody2.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                /*ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                ballBody2.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;*/
+                ballBody.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryLanzadera | filterCategorySensor;
+                ballBody2.getFixtureList().m_filterMaskBits = filterCategoryBall | filterCategoryLanzadera | filterCategorySensor;
 
                 //GroundExt
                 let fixture = bodys['groundExt'].getFixtureList();
@@ -147,6 +151,19 @@
                     fixture.setSensor(true);
                     fixture = fixture.getNext();
                 }
+                //Shuttle
+                fixture = bodys['lanzadera'].getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategoryLanzadera;
+                    fixture = fixture.getNext();
+                }
+                //ShuttleSensor
+                fixture = bodys['lanzaderaSalida'].getFixtureList();
+                while(fixture != null) {
+                    fixture.m_filterCategoryBits = filterCategorySensor;
+                    fixture.setSensor(true);
+                    fixture = fixture.getNext();
+                }
 
                 world.on('end-contact', (contact, oldManifold) => {
                     let bodyA = contact.getFixtureA().getBody();
@@ -166,6 +183,18 @@
                         actualBall.refilter();
                     }
                 });
+
+                world.on('end-contact', (contact, oldManifold) => {
+                    let bodyA = contact.getFixtureA().getBody();
+                    let bodySalidaLanzadera = bodys['lanzaderaSalida'].getFixtureList().getBody();
+                    if(bodyA == bodySalidaLanzadera) {
+                        let actualBall = contact.getFixtureB();
+                        actualBall.m_filterMaskBits = filterCategoryBall | filterCategoryGround | filterCategorySensor;
+                    }
+                });
+
+
+                console.log(ballBody.getFixtureList().m_filterMaskBits);
 
                 testbed.step = function(settings) {
                     if(testbed.activeKeys.left) {

@@ -31,7 +31,7 @@ function createFlipper(leftFlipper, position, ground, scene, world, pl, Vec2) {
         upperAngle: 0.5235,
         enableLimit: true,
         collideConnected: false,
-        maxMotorTorque: 1000000
+        maxMotorTorque: 150000
     };
 
     let joint = world.createJoint(pl.RevoluteJoint(optionJoint, ground, flipperBody, Vec2(position.x, position.y)));
