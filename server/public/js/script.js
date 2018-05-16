@@ -7,16 +7,15 @@ var init = function() {
     var camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
     camera.position.set(0, -125, 90);
     camera.lookAt(0, 0, 0);
-    var controls = new THREE.OrbitControls(camera);
 
-    console.log(camera);
+    var controls = new THREE.OrbitControls(camera);
 
     var renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
 
     document.body.appendChild( renderer.domElement );
 
-    var light = new THREE.DirectionalLight( 0xffffff, 1);
+    var light = new THREE.DirectionalLight( 0xffffff, 1, 100 );
     light.position.set(0, -125, 75);
     scene.add(light);
     scene.add(new THREE.AmbientLight(0xffffff, 0.3));
@@ -27,7 +26,7 @@ var init = function() {
     });
 
     var ball = new THREE.Mesh(
-        new THREE.SphereGeometry(1.25, 20, 20),
+        new THREE.SphereGeometry(1.15, 20, 20),
         new THREE.MeshPhongMaterial({ color: 0xfcaf0a })
     );
     ball.position.set(-7, 0, 15);
@@ -42,7 +41,7 @@ var init = function() {
 
     //var ballBody = world.createDynamicBody({ position: Vec2(-6, 0), bullet: true });
     var ballBody = world.createDynamicBody({ position: Vec2(23, -45), bullet: true });
-    ballBody.createFixture(pl.Circle(1.25), 1);
+    ballBody.createFixture(pl.Circle(1.15), 1);
 
     var bodys = {};
     baseGround.forEach(e => bodys[e.name] = world.createBody());
@@ -61,11 +60,6 @@ var init = function() {
     var inShuttle = true;
     var theTopOfShuttle = 2.75;
 
-
-    //8.73, 36.5
-    flippers.push(createFlipper(true, new THREE.Vector3(-8.73, -36.5, 1), bodys['groundInt'], scene, world, pl, Vec2));
-    flippers.push(createFlipper(false, new THREE.Vector3(8.73, -36.5, 1), bodys['groundInt'], scene, world, pl, Vec2));
-
     for(var obj of baseGround) {
         for(var i = 0; i < obj.lines.length; i += 2) {
             let index1 = obj.lines[i] * 3;
@@ -74,7 +68,9 @@ var init = function() {
             var y1 = obj.points[index1 + 2];
             var x2 = obj.points[index2];
             var y2 = obj.points[index2 + 2];
-            bodys[obj.name].createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            if(obj.name != 'flipperLeft' && obj.name != 'flipperRight') {
+                bodys[obj.name].createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+            }
         }
 
         if(obj.name == 'heightmapRampaLeft' || obj.name == 'heightmapRampaRight') {
@@ -98,6 +94,14 @@ var init = function() {
             }
         }
     }
+
+    //8.73, 36.5
+    flippers.push(createFlipper(true, new THREE.Vector3(-7.92, -37.07, 1), bodys['groundInt'], scene, world, pl, Vec2, baseGround));
+    //flippers.push(createFlipper(false, new THREE.Vector3(7.92, -37.07, 1), bodys['groundInt'], scene, world, pl, Vec2));
+
+    console.table(flippers);
+
+
     heightmapRampaLeft.sort((a, b) => a.y1 - b.y1);
     heightmapRampaRight.sort((a, b) => a.y1 - b.y1);
 
