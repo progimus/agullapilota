@@ -1,5 +1,3 @@
-var socket;
-
 var init = function() {
     //THREE
     var scene = new THREE.Scene();
@@ -45,7 +43,7 @@ var init = function() {
 
     var bodys = {};
     baseGround.forEach(e => bodys[e.name] = world.createBody());
-    console.table(baseGround);
+    console.log(bodys.groundExt);
 
     var heightmapRampaLeft = [];
     var rampaLeftIsActive = false;
@@ -345,6 +343,5 @@ var init = function() {
 }
 
 window.onload = function() {
-    socket = io();
     init();
 }

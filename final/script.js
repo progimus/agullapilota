@@ -9,30 +9,39 @@ window.onload = () => {
 
 	var pinball = new Pinball(document.body, camera, [0, -5]);
 
-	pinball.addLight('DirectionalLight', {
+	pinball.createLight('DirectionalLight', {
 		color: 0xffffff,
 		intensity: 1,
 		position: [0, -125, 75]
 	});
 
-	pinball.addLight('AmbientLight', {
+	pinball.createLight('AmbientLight', {
 		color: 0xffffff,
 		intensity: 0.3
 	});
 
-	pinball.addObject3D('models/supreme.dae', 'StaticObject3D', {});
+	pinball.createObject3D('StaticObject3D', 'models/supreme.dae');
 
-	pinball.addPhysics('BallPhysics', {
-		radius: 1.25,
+	pinball.createFlipper('Flipper1', 'models/flipper.dae', {
+		position: [-7.92, -37.07, 1]
+	});
+
+	pinball.createBall('ball1', {
+		radius: 1,
+		widthSegments: 20,
+		heightSegments: 20,
+		color: 0xff00ff,
+		position: [10, 0.5, 4],
 		mass: 1
 	});
 
-	console.log(pinball.physics);
+	console.log(pinball.world)
+	pinball.start();
 
-	var animate = function() {
+	/*var animate = function() {
 		requestAnimationFrame(animate);
 		pinball.renderer.render(pinball.scene, pinball.camera);
 	}
 
-	animate();
+	animate();*/
 }
