@@ -8,3 +8,5 @@
 - Solucionar problema con la clase camara
 - Crear la grabedad en los tres ejes
 - Hacer algo para no tener que declarar las variables pl y vec2 todo el rato
+- Mirar si se necesita la propiedad this.world en la clase Physics
+- Mirar si desde las functiones del objeto type de cada clase podemos hacer referencia a propiedades de esa clase

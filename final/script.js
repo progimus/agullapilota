@@ -22,10 +22,16 @@ window.onload = () => {
 
 	pinball.addObject3D('models/supreme.dae', 'StaticObject3D', {});
 
+	pinball.addPhysics('BallPhysics', {
+		radius: 1.25,
+		mass: 1
+	});
+
+	console.log(pinball.physics);
+
 	var animate = function() {
 		requestAnimationFrame(animate);
 		pinball.renderer.render(pinball.scene, pinball.camera);
-		//console.log(pinball.scene);
 	}
 
 	animate();

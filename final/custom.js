@@ -2,6 +2,13 @@ function Pinball(domElement, camera, gravity) {
 	this.domElement = domElement || document.body;
 	this.scene = new THREE.Scene();
 
+	var ball = new THREE.Mesh(
+        new THREE.SphereGeometry(1.25, 20, 20),
+        new THREE.MeshPhongMaterial({ color: 0xfcaf0a })
+    );
+    ball.position.set(-7, 0, 15);
+    this.scene.add(ball);
+
 	//this.camera = camera || new Camera();
 	this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
     this.camera.position.set(0, -125, 90);
@@ -14,26 +21,9 @@ function Pinball(domElement, camera, gravity) {
 		Vec2 = pl.Vec2;
 
 	this.world = new pl.World(Vec2(0, -5));
-	this.objects = {};
+	this.physics = [];
 
 	this.domElement.appendChild(this.renderer.domElement);
-}
-
-Pinball.prototype.addLight = function(type, def) {
-	var light = new Light(type, def);
-	this.scene.add(light.object);
-}
-
-Pinball.prototype.addObject3D = function(dae, type, def) {
-	var scene = this.scene,
-		loader = new THREE.ColladaLoader();
-
-	loader.load(dae, function(collada) {
-		scene.add(collada.scene);
-	});
-
-	var object3D = new Object3D(this.world, type, def);
-	this.objects.push(object3D);
 }
 
 /*Pinball.prototype.start = function() {
@@ -65,7 +55,7 @@ function Camera(type, def) {
 	this.object.position.set(...def.position);
 }
 
-Light.TYPES = {
+Pinball.lightTypes = {
 	AmbientLight: function(def) { return new THREE.AmbientLight(def.color, def.intensity); },
 	DirectionalLight: function(def) { return new THREE.DirectionalLight(def.color, def.intensity); },
 	HemisphereLight: function(def) { return new THREE.HemisphereLight(def.skyColor, def.groundColor, def.intensity); },
@@ -87,35 +77,70 @@ const lightDef = {
 	lookAt: [0, 0, 0],
 }
 
-function Light(type, def) {
-	this.type = Object.keys(Light.TYPES).includes(type) ? type : 'AmbientLight';
+Pinball.prototype.addLight = function(type, def) {
+	this.type = Object.keys(Pinball.lightTypes).includes(type) ? type : 'AmbientLight';
 
 	def = setDefaults(def, lightDef);
 
-	this.object = Light.TYPES[this.type](def);
-	this.object.position.set(...def.position);
-	this.object.lookAt(...def.lookAt);
+	var light = Pinball.lightTypes[this.type](def);
+	light.position.set(...def.position);
+	light.lookAt(...def.lookAt);
+
+	this.scene.add(light);
 }
 
-Object3D.TYPES = {
+Pinball.prototype.addObject3D = function(dae) {
+	var scene = this.scene,
+		loader = new THREE.ColladaLoader();
 
+	loader.load(dae, function(collada) {
+		let object = collada.scene;
+		object.name = name;
+		scene.add(object);
+	});
 }
 
-function Object3D(world, type, def) {
-	this.type = Object.keys(Object3D.TYPES).includes(type) ? type : 'StaticObject3D';
+Physics.TYPES = {
+	BallPhysics: function(world, def) { return new BallPhysics(world, def.radius, def.mass); }
+}
 
+Pinball.prototype.addPhysics = function(type, def) {
+	var physics = Physics.TYPES[type](this.world, def);
+	this.physics.push(physics);
+}
+
+function Physics(world) {
+	this.world = world;
+}
+
+Physics.prototype.addFixture = function(points, lines) {
+	for(let i = 0; i < obj.lines.length; i += 2) {
+        let index1 = obj.lines[i] * 3,
+        	index2 = obj.lines[i + 1] * 3;
+        let x1 = obj.points[index1],
+        	y1 = obj.points[index1 + 2],
+        	x2 = obj.points[index2],
+        	y2 = obj.points[index2 + 2];
+        this.body.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
+    }
+}
+
+function BallPhysics(world, radius, mass) {
 	var pl = planck,
 		Vec2 = pl.Vec2;
-
-	this.body = new Body(world, def);
-	this.physics = BallPhysics(this.body, {});
+	Physics.call(this, world);
+	this.body = this.world.createDynamicBody({ bullet: true });
+	this.body.createFixture(pl.Circle(radius), mass);
 }
 
-function Physics() {
-	
+BallPhysics.prototype = Object.create(Physics.prototype);
+
+function GroundPhysics(world, def) {
+	Physics.call(this, world);
+	this.body = this.world.createBody(def);
 }
 
-
+GroundPhysics.prototype = Object.create(Physics.prototype);
 
 /////////////////////////////////
 function setDefaults(to, from) {
