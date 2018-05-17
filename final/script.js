@@ -20,18 +20,19 @@ window.onload = () => {
 		intensity: 0.3
 	});
 
-	pinball.createObject3D('StaticObject3D', 'models/supreme.dae');
-
-	pinball.createFlipper('Flipper1', 'models/flipper.dae', {
+	pinball.createFlipper('Flipper1', {
+		dae: 'models/flipper.dae',
 		position: [-7.92, -37.07, 1],
 		mass: 50,
 		points: baseGround.find(e => e.name == 'leftFlipper').points,
 		lines: baseGround.find(e => e.name == 'leftFlipper').lines,
 		activeKey: 37,
-		active: false
+		active: false,
+		velocity: { up: 30, down: 30 },
+		angles: { min: 0.52, max: 0.52 }
 	});
-
-	pinball.createBall('ball1', {
+	pinball.createBall('Ball1', {
+		dae: 'models/ball.dae',
 		radius: 1,
 		widthSegments: 20,
 		heightSegments: 20,
@@ -39,6 +40,17 @@ window.onload = () => {
 		position: [-7, 0, 0.5],
 		mass: 1
 	});
+
+	pinball.createStage('Stage1', {
+		dae: 'models/supreme.dae',
+		position: [0, 0, 0],
+		bodys: {
+			'body1': {
+				points: baseGround.find(e => e.name == 'groundExt').points,
+				lines: baseGround.find(e => e.name == 'groundExt').lines
+			}
+		}
+	})
 
 	pinball.start();
 

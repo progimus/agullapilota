@@ -1,3 +1,6 @@
+const pl = planck,
+	Vec2 = pl.Vec2;
+
 function Pinball(domElement, camera, gravity) {
 	this.domElement = domElement || document.body;
 	this.scene = new THREE.Scene();
@@ -10,13 +13,11 @@ function Pinball(domElement, camera, gravity) {
 	this.renderer = new THREE.WebGLRenderer({ antialias: true });
 	this.renderer.setSize(domElement.offsetWidth, domElement.offsetHeight);
 
-	var pl = planck,
-		Vec2 = pl.Vec2;
-
 	this.world = new pl.World(Vec2(0, -10));
 
 	this.balls = {};
 	this.flippers = {};
+	this.stages = {};
 
 	this.domElement.appendChild(this.renderer.domElement);
 }
@@ -31,6 +32,24 @@ Pinball.prototype.start = function() {
 Pinball.prototype.update = function() {
 	Object.keys(this.balls).forEach(key => this.balls[key].update());
 	Object.keys(this.flippers).forEach(key => this.flippers[key].update());
+}
+
+Pinball.prototype.createBall = function(id, def) {
+	var ball = new Ball(this.world, def);
+	this.scene.add(ball.object);
+	this.balls[id] = ball;
+}
+
+Pinball.prototype.createFlipper = function(id, def) {
+	var flipper = new Flipper(this.world, def);
+	this.scene.add(flipper.object);
+	this.flippers[id] = flipper;
+}
+
+Pinball.prototype.createStage = function(id, def) {
+	var stage = new Stage(this.world, def);
+	this.scene.add(stage.object);
+	this.stages[id] = stage;
 }
 
 Camera.TYPES = {
@@ -90,75 +109,6 @@ Pinball.prototype.createLight = function(type, def) {
 	this.scene.add(light);
 }
 
-Pinball.prototype.createObject3D = function(type, dae) {
-	type = Object.keys(Pinball.object3DTypes).includes(type) ? type : 'StaticObject3D';
-
-	//def = setDefaults(def, object3DDef);
-
-	//def.name = this.getObject3D(name) ? 'defaultName' : name;
-	//def.position || [0, 0, 0];
-	var object3D = Pinball.object3DTypes[type](this.world, dae);
-	this.scene.add(object3D.object);
-}
-
-Pinball.prototype.getObject3D = function(name) {
-	return this.objects3D[name];
-}
-
-Pinball.object3DTypes = {
-	BallObject3D: function(world, dae) { return new BallObject3D(world, dae); },
-	FlipperObject3D: function(world, dae) { return new FlipperObject3D(world, dae); },
-	StaticObject3D: function(world, dae) { return new StaticObject3D(world, dae); }
-}
-
-function Object3D(world, dae) {
-	this.world = world;
-
-	this.object = new THREE.Object3D();
-
-	var that = this;
-	var loader = new THREE.ColladaLoader();
-	loader.load(dae, collada => {
-		that.object.add(collada.scene);
-	});
-
-	this.physics = {};
-}
-
-Object3D.prototype.update = function() {
-	this.object.position.x = this.physics.getPosition().x;
-	this.object.position.y = this.physics.getPosition().y;
-}
-
-function BallObject3D(world, dae) {
-	Object3D.call(this, world, dae);
-	this.physics = {
-
-	}
-}
-
-function FlipperObject3D(world, dae) {
-	Object3D.call(this, world, dae);
-	this.flipper = this.object;
-	this.object = new THREE.Object3D;
-	this.object.add(this.flipper);
-}
-
-function StaticObject3D(world, dae) {
-	Object3D.call(this, world, dae);
-}
-
-BallObject3D.prototype = Object.create(Object3D.prototype);
-FlipperObject3D.prototype = Object.create(Object3D.prototype);
-StaticObject3D.prototype = Object.create(Object3D.prototype);
-
-Pinball.prototype.createBall = function(id, def) {
-	var ball = new Ball(this.world, def);
-
-	this.scene.add(ball.object3D);
-	this.balls.id = ball;
-}
-
 const ballDef = {
 	radius: 1,
 	widthSegments: 8,
@@ -168,117 +118,23 @@ const ballDef = {
 	mass: 1
 }
 
-function Ball(world, def) {
-	this.type = 'Ball';
+function Object3D(world, def) {
+    this.world = world;
 
-	def = setDefaults(def, ballDef);
-
-	this.object3D = new THREE.Mesh(
-        new THREE.SphereGeometry(def.radius, def.widthSegments, def.heightSegments),
-        new THREE.MeshPhongMaterial({ color: def.color })
-    );
-    this.object3D.position.set(...def.position);
-
-    var pl = planck,
-    	Vec2 = pl.Vec2;
-
-	this.body = world.createDynamicBody({
-		position: Vec2(def.position[0], def.position[1]),
-		bullet: true
-	});
-
-	this.body.createFixture(pl.Circle(def.radius), def.mass);
-}
-
-Pinball.prototype.createFlipper = function(id, dae, def) {
-	var flipper = new Flipper(this.world, dae, def);
-
-	this.scene.add(flipper.object3D);
-	this.flippers.id = flipper;
-}
-
-Ball.prototype.update = function() {
-	var position = this.body.getPosition();
-	this.object3D.position.x = position.x;
-	this.object3D.position.y = position.y;
-}
-
-function Flipper(world, dae, def) {
-	this.type = 'Flipper';
-
-	this.object3D = new THREE.Object3D();
+	this.object = new THREE.Object3D();
 
 	var loader = new THREE.ColladaLoader(),
 		that = this;
 
-	loader.load(dae, collada => {
-		that.object3D.add(collada.scene);
+	loader.load(def.dae, collada => {
+		that.object.add(collada.scene);
 	});
-	this.object3D.position.set(...def.position);
-
-	var pl = planck,
-    	Vec2 = pl.Vec2;
-
-	this.body = world.createDynamicBody({
-		position: Vec2(def.position[0], def.position[1]),
-		bullet: true
-	});
-
-	this.body.createFixture(pl.Circle(0.5), def.mass);
-	this.createFixture(def);
-	let optionJoint = {
-        enableMotor: true,
-        lowerAngle: -0.5235,
-        upperAngle: 0.5235,
-        enableLimit: true,
-        collideConnected: false,
-        maxMotorTorque: 150000
-    };
-
-    this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position[0], def.position[1])));
-
-    //console.log(this.motor);
-    document.body.addEventListener('keydown', evt => {
-    	if(evt.keyCode == def.activeKey) this.active = true;
-    });
-
-    document.body.addEventListener('keyup', evt => {
-    	if(evt.keyCode == def.activeKey) this.active = false;
-    });
-    console.log(this.motor);
+	this.object.position.set(...def.position);
 }
 
-Flipper.prototype.update = function() {
-    this.body.setFixedRotation(false);
-    let [velUp, velDown] = [30,-30]
-
-    if(this.active) {
-        if(this.motor.getJointAngle() >= 0.52) {
-            this.body.m_sweep.a = 0.52;
-            this.body.setFixedRotation(true);
-        }
-    } else {
-        if(this.motor.getJointAngle() <= -0.52) {
-            this.body.m_sweep.a = -0.52;
-            this.body.setFixedRotation(true);
-        }
-    }
-
-    //console.log(this.motor);
-
-    this.motor.setMotorSpeed(this.active ? velUp : velDown);
-    this.object3D.rotation.z = this.motor.getJointAngle();
-	var position = this.body.getPosition();
-	this.object3D.position.x = position.x;
-	this.object3D.position.y = position.y;
-}
-
-Flipper.prototype.createFixture = function(def) {
+Object3D.prototype.createFixture = function(body, def) {
 	var points = def.points,
 		lines = def.lines;
-
-	var pl = planck,
-    	Vec2 = pl.Vec2;
 
 	for(var i = 0; i < lines.length; i += 2) {
         var index1 = lines[i] * 3,
@@ -289,20 +145,114 @@ Flipper.prototype.createFixture = function(def) {
         	x2 = points[index2],
         	y2 = points[index2 + 2];
 
-        this.body.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), def.mass);
+        body.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), 0);
     }
 }
+
+function Ball(world, def) {
+    Object3D.call(this, world, def);
+
+    this.type = 'Ball';
+
+	this.body = world.createDynamicBody({
+		position: Vec2(def.position[0], def.position[1]),
+		bullet: true
+	});
+
+	this.body.createFixture(pl.Circle(def.radius), def.mass);
+}
+
+Ball.prototype = Object.create(Object3D.prototype);
+
+Ball.prototype.update = function() {
+	var position = this.body.getPosition();
+	this.object.position.x = position.x;
+	this.object.position.y = position.y;
+}
+
+function Flipper(world, def) {
+    Object3D.call(this, world, def);
+
+    this.type = 'Flipper';
+
+	this.body = world.createDynamicBody({
+		position: Vec2(def.position[0], def.position[1]),
+		bullet: true
+	});
+
+	this.body.createFixture(pl.Circle(1), def.mass);
+	this.createFixture(this.body, def);
+
+	this.velocity = { up: def.velocity.up, down: -def.velocity.down };
+	this.angles = { min: -def.angles.min, max: def.angles.max }
+
+	let optionJoint = {
+        enableMotor: true,
+        lowerAngle: this.angles.min,
+        upperAngle: this.angles.max,
+        enableLimit: true,
+        collideConnected: false,
+        maxMotorTorque: 150000
+    };
+
+    this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position[0], def.position[1])));
+
+    document.body.addEventListener('keydown', evt => {
+    	if(evt.keyCode == def.activeKey) this.active = true;
+    });
+
+    document.body.addEventListener('keyup', evt => {
+    	if(evt.keyCode == def.activeKey) this.active = false;
+    });
+
+	console.log(this.body);
+}
+
+Flipper.prototype = Object.create(Object3D.prototype);
+
+Flipper.prototype.update = function() {
+    this.body.setFixedRotation(false);
+
+    if(this.active) {
+        if(this.motor.getJointAngle() >= this.angles.max) {
+            this.body.setAngle(this.angles.max);
+            this.body.setFixedRotation(true);
+        }
+    } else {
+        if(this.motor.getJointAngle() <= this.angles.min) {
+            this.body.setAngle(this.angles.min);
+            this.body.setFixedRotation(true);
+        }
+    }
+
+    this.motor.setMotorSpeed(this.active ? this.velocity.up : this.velocity.down);
+    this.object.rotation.z = this.motor.getJointAngle();
+
+	var position = this.body.getPosition();
+	this.object.position.x = position.x;
+	this.object.position.y = position.y;
+}
+
+function Stage(world, def) {
+    Object3D.call(this, world, def);
+
+    this.type = 'Stage';
+
+	this.bodys = {};
+
+	Object.keys(def.bodys).forEach(bodyId => {
+        this.bodys[bodyId] = world.createBody();
+        this.createFixture(this.bodys[bodyId], def.bodys[bodyId]);
+    });
+}
+
+Stage.prototype = Object.create(Object3D.prototype);
 
 /////////////////////////////////
 function setDefaults(to, from) {
 	to = to || {};
 
-	/*Object.keys(from)
-		.forEach(key => to[key] = to[key] || from[key]);*/
-
-	for(var key in from) {
-		to[key] = to[key] || from[key];
-	}
+	Object.keys(from).forEach(key => to[key] = to[key] || from[key]);
 
 	return to;
 }
