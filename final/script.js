@@ -23,7 +23,12 @@ window.onload = () => {
 	pinball.createObject3D('StaticObject3D', 'models/supreme.dae');
 
 	pinball.createFlipper('Flipper1', 'models/flipper.dae', {
-		position: [-7.92, -37.07, 1]
+		position: [-7.92, -37.07, 1],
+		mass: 50,
+		points: baseGround.find(e => e.name == 'leftFlipper').points,
+		lines: baseGround.find(e => e.name == 'leftFlipper').lines,
+		activeKey: 37,
+		active: false
 	});
 
 	pinball.createBall('ball1', {
@@ -31,11 +36,10 @@ window.onload = () => {
 		widthSegments: 20,
 		heightSegments: 20,
 		color: 0xff00ff,
-		position: [10, 0.5, 4],
+		position: [-7, 0, 0.5],
 		mass: 1
 	});
 
-	console.log(pinball.world)
 	pinball.start();
 
 	/*var animate = function() {

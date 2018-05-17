@@ -30,6 +30,7 @@ Pinball.prototype.start = function() {
 
 Pinball.prototype.update = function() {
 	Object.keys(this.balls).forEach(key => this.balls[key].update());
+	Object.keys(this.flippers).forEach(key => this.flippers[key].update());
 }
 
 Camera.TYPES = {
@@ -182,11 +183,11 @@ function Ball(world, def) {
     	Vec2 = pl.Vec2;
 
 	this.body = world.createDynamicBody({
-		position: Vec2(def.position[0], def.position[2]),
+		position: Vec2(def.position[0], def.position[1]),
 		bullet: true
 	});
 
-	this.fixture = this.body.createFixture(pl.Circle(def.radius), def.mass);
+	this.body.createFixture(pl.Circle(def.radius), def.mass);
 }
 
 Pinball.prototype.createFlipper = function(id, dae, def) {
@@ -215,9 +216,81 @@ function Flipper(world, dae, def) {
 	});
 	this.object3D.position.set(...def.position);
 
-	this.world = world;
+	var pl = planck,
+    	Vec2 = pl.Vec2;
 
-	this.fixture = this.body.createFixture()
+	this.body = world.createDynamicBody({
+		position: Vec2(def.position[0], def.position[1]),
+		bullet: true
+	});
+
+	this.body.createFixture(pl.Circle(0.5), def.mass);
+	this.createFixture(def);
+	let optionJoint = {
+        enableMotor: true,
+        lowerAngle: -0.5235,
+        upperAngle: 0.5235,
+        enableLimit: true,
+        collideConnected: false,
+        maxMotorTorque: 150000
+    };
+
+    this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position[0], def.position[1])));
+
+    //console.log(this.motor);
+    document.body.addEventListener('keydown', evt => {
+    	if(evt.keyCode == def.activeKey) this.active = true;
+    });
+
+    document.body.addEventListener('keyup', evt => {
+    	if(evt.keyCode == def.activeKey) this.active = false;
+    });
+    console.log(this.motor);
+}
+
+Flipper.prototype.update = function() {
+    this.body.setFixedRotation(false);
+    let [velUp, velDown] = [30,-30]
+
+    if(this.active) {
+        if(this.motor.getJointAngle() >= 0.52) {
+            this.body.m_sweep.a = 0.52;
+            this.body.setFixedRotation(true);
+        }
+    } else {
+        if(this.motor.getJointAngle() <= -0.52) {
+            this.body.m_sweep.a = -0.52;
+            this.body.setFixedRotation(true);
+        }
+    }
+
+    //console.log(this.motor);
+
+    this.motor.setMotorSpeed(this.active ? velUp : velDown);
+    this.object3D.rotation.z = this.motor.getJointAngle();
+	var position = this.body.getPosition();
+	this.object3D.position.x = position.x;
+	this.object3D.position.y = position.y;
+}
+
+Flipper.prototype.createFixture = function(def) {
+	var points = def.points,
+		lines = def.lines;
+
+	var pl = planck,
+    	Vec2 = pl.Vec2;
+
+	for(var i = 0; i < lines.length; i += 2) {
+        var index1 = lines[i] * 3,
+        	index2 = lines[i + 1] * 3;
+
+        var x1 = points[index1],
+        	y1 = points[index1 + 2],
+        	x2 = points[index2],
+        	y2 = points[index2 + 2];
+
+        this.body.createFixture(pl.Edge(Vec2(x1, y1), Vec2(x2, y2)), def.mass);
+    }
 }
 
 /////////////////////////////////
