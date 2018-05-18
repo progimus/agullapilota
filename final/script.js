@@ -44,13 +44,20 @@ window.onload = () => {
 	pinball.createStage('Stage1', {
 		dae: 'models/supreme.dae',
 		position: [0, 0, 0],
+		points: baseGround.find(e => e.name == 'leftFlipper').points,
+		lines: baseGround.find(e => e.name == 'leftFlipper').lines,
+	})
+
+	pinball.createBouncer('Bouncer1', {
+		dae: 'models/flipper.dae',
+		position: [0, 0, 0],
 		bodys: {
 			'body1': {
-				points: baseGround.find(e => e.name == 'groundExt').points,
-				lines: baseGround.find(e => e.name == 'groundExt').lines
+				points: baseGround.find(e => e.name == 'leftFlipper').points,
+				lines: baseGround.find(e => e.name == 'leftFlipper').lines
 			}
 		}
-	})
+	});
 
 	pinball.start();
 

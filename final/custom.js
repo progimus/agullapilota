@@ -18,6 +18,7 @@ function Pinball(domElement, camera, gravity) {
 	this.balls = {};
 	this.flippers = {};
 	this.stages = {};
+	this.bouncers = {};
 
 	this.domElement.appendChild(this.renderer.domElement);
 }
@@ -50,6 +51,12 @@ Pinball.prototype.createStage = function(id, def) {
 	var stage = new Stage(this.world, def);
 	this.scene.add(stage.object);
 	this.stages[id] = stage;
+}
+
+Pinball.prototype.createBouncer = function(id, def) {
+	var bouncer = new Bouncer(this.world, def);
+	this.scene.add(bouncer.object);
+	this.bouncers[id] = bouncer;
 }
 
 Camera.TYPES = {
@@ -247,6 +254,43 @@ function Stage(world, def) {
 }
 
 Stage.prototype = Object.create(Object3D.prototype);
+
+function Bouncer(world, def) {
+	Object3D.call(this, world, def);
+
+	this.type = 'Bouncer';
+
+	this.body = {};
+
+	this.createFixture(this.body, def);
+
+	this.bouncing = def.bouncing; // { min: n, max: n }
+
+	world.on('end-contact', contact => {
+		if(this.body == contact.getFixtureA().getBody()) {
+			var ball = contact.getFixtureB().getBody(),
+				velocity = ball.getLinearVelocity(),
+				impulse = velocity.mul(1.5),
+				min = this.bouncing.min,
+				max = this.bouncing.max;
+
+			if(Math.abs(impulse.x) < min && Math.abs(impulse.y) < min) {
+				var bigger = Math.abs(velocity.x) > Math.abs(velocity.y) ? velocity.x : velocity.y;
+				var multipler = Math.abs(min / bigger);
+				impulse = velocity.mul(multipler);
+			} else if(Math.abs(impulse.x) > max && Math.abs(impulse.y) > max) {
+				var bigger = Math.abs(velocity.x) > Math.abs(velocity.y) ? velocity.x : velocity.y;
+				var divisor = Math.abs(bigger / max);
+				impulse = Vec2(velocity.x / divisor, velocity.y / divisor);
+			}
+			ball.applyLinearImpulse(impulse, Vec2(0, 0), true);
+		}
+	});
+}
+
+Bouncer.prototype = Object.create(Object3D.prototype);
+
+
 
 /////////////////////////////////
 function setDefaults(to, from) {
