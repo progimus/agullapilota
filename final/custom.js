@@ -1,7 +1,7 @@
 const pl = planck,
 	Vec2 = pl.Vec2;
 
-function Pinball(domElement, gravity) {
+function Pinball(domElement, def) {
 	this.domElement = domElement || document.body;
 	this.scene = new THREE.Scene();
 
@@ -13,15 +13,25 @@ function Pinball(domElement, gravity) {
 	this.renderer = new THREE.WebGLRenderer({ antialias: true });
 	this.renderer.setSize(domElement.offsetWidth, domElement.offsetHeight);
 
-	this.world = new pl.World(Vec2(0, -10));
+	this.world = new pl.World(Vec2(...def.world.gravity));
 
-	this.elements = {
-		lights: {},
+	this.cameras = {};
+	this.lights = {};
+
+	this.objects3D = {
 		balls: {},
 		flippers: {},
 		stages: {},
 		bouncers: {}
 	};
+
+	var elements = def.elements;
+
+	Object.keys(elements).forEach(type => {
+		Object.keys(elements[type]).forEach(id => {
+			this.createElement(type, id, elements[type][id]);
+		});
+	});
 
 	this.domElement.appendChild(this.renderer.domElement);
 }
@@ -29,68 +39,17 @@ function Pinball(domElement, gravity) {
 Pinball.prototype.start = function() {
 	this.world.step(1/ 25)
 	this.update();
-	this.renderer.render(this.scene, this.camera.object);
+	this.renderer.render(this.scene, this.camera);
 	requestAnimationFrame(() => this.start());
 }
 
 Pinball.prototype.update = function() {
-	Object.keys(this.balls).forEach(key => this.balls[key].update());
-	Object.keys(this.flippers).forEach(key => this.flippers[key].update());
+	Object.keys(this.objects3D.balls).forEach(key => this.objects3D.balls[key].update());
+	Object.keys(this.objects3D.flippers).forEach(key => this.objects3D.flippers[key].update());
 }
 
-const elementTypes = {
-	'lights':
-}
-
-Pinball.prototype.createElement = function(type, id, def) {
-	
-}
-
-Pinball.prototype.createBall = function(id, def) {
-	var ball = new Ball(this.world, def);
-	this.scene.add(ball.object);
-	this.balls[id] = ball;
-}
-
-Pinball.prototype.createFlipper = function(id, def) {
-	var flipper = new Flipper(this.world, def);
-	this.scene.add(flipper.object);
-	this.flippers[id] = flipper;
-}
-
-Pinball.prototype.createStage = function(id, def) {
-	var stage = new Stage(this.world, def);
-	this.scene.add(stage.object);
-	this.stages[id] = stage;
-}
-
-Pinball.prototype.createBouncer = function(id, def) {
-	var bouncer = new Bouncer(this.world, def);
-	this.scene.add(bouncer.object);
-	this.bouncers[id] = bouncer;
-}
-
-Camera.TYPES = {
-	PerspectiveCamera: function(def) {
-		return new THREE.PerspectiveCamera(def.fov, def.aspect, def.near, def.far);
-	}
-}
-
-const cameraDef = {
-	fov: 45,
-	aspect: 1.19,
-	near: 1,
-	far: 1000,
-	position: [0, 0, 0]
-};
-
-function Camera(type, def) {
-	type = Object.keys(Camera.TYPES).includes(type) ? type : 'PerspectiveCamera';
-
-	def = setDefaults(def, cameraDef);
-
-	this.object = Camera.TYPES[type](def);
-	this.object.position.set(...def.position);
+Pinball.cameraTypes = {
+	PerspectiveCamera: function(def) { return new THREE.PerspectiveCamera(def.fov, def.aspect, def.near, def.far); }
 }
 
 Pinball.lightTypes = {
@@ -101,6 +60,54 @@ Pinball.lightTypes = {
 	RectAreaLight: function(def) { return new THREE.RectAreaLight(def.color, def.intensity, def.width, def.height); },
 	SpotLight: function(def) { return new THREE.SpotLight( def.color, def.intensity, def.distance, def.angle, def.penumbra, def.decay); }
 }
+
+Pinball.object3DTypes = {
+	Ball: function(world, def) { return new Ball(world, def); },
+	Flipper: function(world, def) { return new Flipper(world, def); },
+	Stage: function(world, def) { return new Stage(world, def); },
+	Bouncer: function(world, def) { return new Bouncer(world, def); }
+};
+
+Pinball.prototype.createElement = function(type, id, def) {
+	var elementTypes = {
+		cameras: (id, def) => {
+			type = Object.keys(Pinball.cameraTypes).includes(def.type) ? def.type : 'PerspectiveCamera';
+
+			Pinball.cameraTypes[def.type]
+
+			this.cameras = Pinball.cameraTypes[def.type](def);
+			this.object.position.set(...def.position);
+		},
+		lights: (id, def) => {
+			type = Object.keys(Pinball.lightTypes).includes(def.type) ? def.type : 'AmbientLight';
+
+			def = setDefaults(def, lightDef);
+
+			var light = Pinball.lightTypes[def.type](def);
+			light.position.set(...def.position);
+			light.lookAt(...def.lookAt);
+
+			this.scene.add(light);
+			this.lights[id] = light;
+		},
+		objects3D: (id, def) => {
+			type = Object.keys(Pinball.object3DTypes).includes(def.type) ? def.type : 'Stage';
+
+			var object3D = Pinball.object3DTypes[def.type](this.world, def);
+			this.scene.add(object3D.object);
+			this.objects3D[def.type.toLowerCase() + 's'][id] = object3D;
+		}
+	}
+	elementTypes[type](id, def);
+}
+
+const cameraDef = {
+	fov: 45,
+	aspect: 1.19,
+	near: 1,
+	far: 1000,
+	position: [0, 0, 0]
+};
 
 const lightDef = {
 	color: 0xffffff,
@@ -113,18 +120,6 @@ const lightDef = {
 	height: 10,
 	position: [0, 0, 0],
 	lookAt: [0, 0, 0],
-}
-
-Pinball.prototype.createLight = function(type, def) {
-	type = Object.keys(Pinball.lightTypes).includes(type) ? type : 'AmbientLight';
-
-	def = setDefaults(def, lightDef);
-
-	var light = Pinball.lightTypes[type](def);
-	light.position.set(...def.position);
-	light.lookAt(...def.lookAt);
-
-	this.scene.add(light);
 }
 
 const ballDef = {
