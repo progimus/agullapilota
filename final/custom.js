@@ -1,11 +1,11 @@
 const pl = planck,
 	Vec2 = pl.Vec2;
 
-function Pinball(domElement, camera, gravity) {
+function Pinball(domElement, gravity) {
 	this.domElement = domElement || document.body;
 	this.scene = new THREE.Scene();
 
-	//this.camera = camera || new Camera();
+	//this.camera = camera;
 	this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
     this.camera.position.set(0, -125, 90);
     this.camera.lookAt(0, 0, 0);
@@ -15,10 +15,13 @@ function Pinball(domElement, camera, gravity) {
 
 	this.world = new pl.World(Vec2(0, -10));
 
-	this.balls = {};
-	this.flippers = {};
-	this.stages = {};
-	this.bouncers = {};
+	this.elements = {
+		lights: {},
+		balls: {},
+		flippers: {},
+		stages: {},
+		bouncers: {}
+	};
 
 	this.domElement.appendChild(this.renderer.domElement);
 }
@@ -26,13 +29,21 @@ function Pinball(domElement, camera, gravity) {
 Pinball.prototype.start = function() {
 	this.world.step(1/ 25)
 	this.update();
-	this.renderer.render(this.scene, this.camera);
+	this.renderer.render(this.scene, this.camera.object);
 	requestAnimationFrame(() => this.start());
 }
 
 Pinball.prototype.update = function() {
 	Object.keys(this.balls).forEach(key => this.balls[key].update());
 	Object.keys(this.flippers).forEach(key => this.flippers[key].update());
+}
+
+const elementTypes = {
+	'lights':
+}
+
+Pinball.prototype.createElement = function(type, id, def) {
+	
 }
 
 Pinball.prototype.createBall = function(id, def) {
@@ -190,50 +201,63 @@ function Flipper(world, def) {
 	this.body.createFixture(pl.Circle(1), def.mass);
 	this.createFixture(this.body, def);
 
-	this.velocity = { up: def.velocity.up, down: -def.velocity.down };
-	this.angles = { min: -def.angles.min, max: def.angles.max }
+	this.orientation = def.orientation;
+	this.velocity = { down: def.velocity.down, up: def.velocity.up };
+	this.limits = { lower: def.limits.lower, upper: def.limits.upper };
 
 	let optionJoint = {
-        enableMotor: true,
-        lowerAngle: this.angles.min,
-        upperAngle: this.angles.max,
-        enableLimit: true,
-        collideConnected: false,
-        maxMotorTorque: 150000
-    };
+		enableMotor: true,
+		lowerAngle: this.limits.lower,
+		upperAngle: this.limits.upper,
+		enableLimit: true,
+		collideConnected: false,
+		maxMotorTorque: 150000
+	};
 
-    this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position[0], def.position[1])));
+	this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position[0], def.position[1])));
 
-    document.body.addEventListener('keydown', evt => {
-    	if(evt.keyCode == def.activeKey) this.active = true;
-    });
+	document.body.addEventListener('keydown', evt => {
+		if(evt.keyCode == def.activeKey) this.active = true;
+	});
 
-    document.body.addEventListener('keyup', evt => {
-    	if(evt.keyCode == def.activeKey) this.active = false;
-    });
-
-	console.log(this.body);
+	document.body.addEventListener('keyup', evt => {
+		if(evt.keyCode == def.activeKey) this.active = false;
+	});
 }
 
 Flipper.prototype = Object.create(Object3D.prototype);
 
 Flipper.prototype.update = function() {
-    this.body.setFixedRotation(false);
+	this.body.setFixedRotation(false);
 
-    if(this.active) {
-        if(this.motor.getJointAngle() >= this.angles.max) {
-            this.body.setAngle(this.angles.max);
-            this.body.setFixedRotation(true);
-        }
-    } else {
-        if(this.motor.getJointAngle() <= this.angles.min) {
-            this.body.setAngle(this.angles.min);
-            this.body.setFixedRotation(true);
-        }
-    }
+	if(this.orientation == 'right') {
+		if(this.active) {
+			if(this.motor.getJointAngle() >= this.limits.upper) {
+				this.body.setAngle(this.limits.upper);
+				this.body.setFixedRotation(true);
+			}
+		} else {
+			if(this.motor.getJointAngle() <= this.limits.lower) {
+				this.body.setAngle(this.limits.lower);
+				this.body.setFixedRotation(true);
+			}
+		}
+	} else {
+		if(this.active) {
+			if(this.motor.getJointAngle() <= this.limits.lower) {
+				this.body.setAngle(this.limits.lower);
+				this.body.setFixedRotation(true);
+			}
+		} else {
+			if(this.motor.getJointAngle() >= this.limits.upper) {
+				this.body.setAngle(this.limits.upper);
+				this.body.setFixedRotation(true);
+			}
+		}
+	}
 
-    this.motor.setMotorSpeed(this.active ? this.velocity.up : this.velocity.down);
-    this.object.rotation.z = this.motor.getJointAngle();
+	this.motor.setMotorSpeed(this.active ? this.velocity.up : this.velocity.down);
+	this.object.rotation.z = this.motor.getJointAngle();
 
 	var position = this.body.getPosition();
 	this.object.position.x = position.x;
@@ -260,27 +284,28 @@ function Bouncer(world, def) {
 
 	this.type = 'Bouncer';
 
-	this.body = {};
+	this.body = world.createBody({
+		position: Vec2(def.position[0], def.position[1])
+	});
 
 	this.createFixture(this.body, def);
 
-	this.bouncing = def.bouncing; // { min: n, max: n }
+	this.bouncing = def.bouncing;
 
 	world.on('end-contact', contact => {
 		if(this.body == contact.getFixtureA().getBody()) {
+			console.log('collide');
 			var ball = contact.getFixtureB().getBody(),
 				velocity = ball.getLinearVelocity(),
-				impulse = velocity.mul(1.5),
-				min = this.bouncing.min,
-				max = this.bouncing.max;
+				impulse = velocity.mul(1.5);
 
-			if(Math.abs(impulse.x) < min && Math.abs(impulse.y) < min) {
+			if(Math.abs(impulse.x) < this.bouncing.min && Math.abs(impulse.y) < this.bouncing.min) {
 				var bigger = Math.abs(velocity.x) > Math.abs(velocity.y) ? velocity.x : velocity.y;
-				var multipler = Math.abs(min / bigger);
+				var multipler = Math.abs(this.bouncing.min / bigger);
 				impulse = velocity.mul(multipler);
-			} else if(Math.abs(impulse.x) > max && Math.abs(impulse.y) > max) {
+			} else if(Math.abs(impulse.x) > this.bouncing.max || Math.abs(impulse.y) > this.bouncing.max) {
 				var bigger = Math.abs(velocity.x) > Math.abs(velocity.y) ? velocity.x : velocity.y;
-				var divisor = Math.abs(bigger / max);
+				var divisor = Math.abs(bigger / this.bouncing.max);
 				impulse = Vec2(velocity.x / divisor, velocity.y / divisor);
 			}
 			ball.applyLinearImpulse(impulse, Vec2(0, 0), true);
@@ -289,8 +314,6 @@ function Bouncer(world, def) {
 }
 
 Bouncer.prototype = Object.create(Object3D.prototype);
-
-
 
 /////////////////////////////////
 function setDefaults(to, from) {

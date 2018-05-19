@@ -1,4 +1,17 @@
 window.onload = () => {
+
+	var loader = function() {
+		var pinball = new Pinball(document.body, level.world.gravity);
+
+		var elements = level.elements;
+
+		Object.keys(elements).forEach(type => {
+			Object.keys(elements[type]).forEach(id => {
+				pinball.createElement(type, id, elements[type][id]);
+			})
+		})
+	}
+
 	var camera = new Camera('PerspectiveCamera', {
 		fov: 30,
 		aspect: document.body.offsetWidth / document.body.offsetHeight,
@@ -20,17 +33,32 @@ window.onload = () => {
 		intensity: 0.3
 	});
 
-	pinball.createFlipper('Flipper1', {
-		dae: 'models/flipper.dae',
+	pinball.createFlipper('FlipperLeft', {
+		dae: 'models/flipperLeft.dae',
 		position: [-7.92, -37.07, 1],
 		mass: 50,
-		points: baseGround.find(e => e.name == 'leftFlipper').points,
-		lines: baseGround.find(e => e.name == 'leftFlipper').lines,
+		points: flipperJSON.find(e => e.name == 'flipperLeft').points,
+		lines: flipperJSON.find(e => e.name == 'flipperLeft').lines,
 		activeKey: 37,
 		active: false,
-		velocity: { up: 30, down: 30 },
-		angles: { min: 0.52, max: 0.52 }
+		orientation: 'right',
+		velocity: { down: -30, up: 30 },
+		limits: { lower: -0.52, upper: 0.52 }
 	});
+
+	pinball.createFlipper('FlipperRight', {
+		dae: 'models/flipperRight.dae',
+		position: [7.92, -37.07, 1],
+		mass: 50,
+		points: flipperJSON.find(e => e.name == 'flipperRight').points,
+		lines: flipperJSON.find(e => e.name == 'flipperRight').lines,
+		activeKey: 39,
+		active: false,
+		orientation: 'left',
+		velocity: { down: 30, up: -30 },
+		limits: { lower: -0.52, upper: 0.52 }
+	});
+
 	pinball.createBall('Ball1', {
 		dae: 'models/ball.dae',
 		radius: 1,
@@ -44,27 +72,41 @@ window.onload = () => {
 	pinball.createStage('Stage1', {
 		dae: 'models/supreme.dae',
 		position: [0, 0, 0],
-		points: baseGround.find(e => e.name == 'leftFlipper').points,
-		lines: baseGround.find(e => e.name == 'leftFlipper').lines,
+		bodys: {
+			'body1': {
+				points: baseGround.find(e => e.name == 'groundExt').points,
+				lines: baseGround.find(e => e.name == 'groundExt').lines
+			},
+			'body2': {
+				points: baseGround.find(e => e.name == 'groundInt').points,
+				lines: baseGround.find(e => e.name == 'groundInt').lines
+			}
+		}
 	})
 
 	pinball.createBouncer('Bouncer1', {
-		dae: 'models/flipper.dae',
-		position: [0, 0, 0],
-		bodys: {
-			'body1': {
-				points: baseGround.find(e => e.name == 'leftFlipper').points,
-				lines: baseGround.find(e => e.name == 'leftFlipper').lines
-			}
-		}
+		dae: 'models/circle.dae',
+		position: [-7.66, 25.86, 0],
+		points: circle.points,
+		lines: circle.lines,
+		bouncing: { min: 8, max: 15 }
+	});
+
+	pinball.createBouncer('Bouncer2', {
+		dae: 'models/circle.dae',
+		position: [0.75, 33.39, 0],
+		points: circle.points,
+		lines: circle.lines,
+		bouncing: { min: 8, max: 15 }
+	});
+
+	pinball.createBouncer('Bouncer3', {
+		dae: 'models/circle.dae',
+		position: [-10, 36.87, 0],
+		points: circle.points,
+		lines: circle.lines,
+		bouncing: { min: 8, max: 15 }
 	});
 
 	pinball.start();
-
-	/*var animate = function() {
-		requestAnimationFrame(animate);
-		pinball.renderer.render(pinball.scene, pinball.camera);
-	}
-
-	animate();*/
 }
