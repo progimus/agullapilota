@@ -5,25 +5,21 @@ function Pinball(domElement, def) {
 	this.domElement = domElement || document.body;
 	this.scene = new THREE.Scene();
 
-	//this.camera = camera;
-	this.camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
-    this.camera.position.set(0, -125, 90);
-    this.camera.lookAt(0, 0, 0);
-
 	this.renderer = new THREE.WebGLRenderer({ antialias: true });
 	this.renderer.setSize(domElement.offsetWidth, domElement.offsetHeight);
 
 	this.world = new pl.World(Vec2(...def.world.gravity));
 
-	this.cameras = {};
-	this.lights = {};
-
-	this.objects3D = {
+	this.elements = {
+		cameras: {},
+		lights: {},
 		balls: {},
 		flippers: {},
 		stages: {},
 		bouncers: {}
-	};
+	}
+
+	this.camera = def.camera;
 
 	var elements = def.elements;
 
@@ -34,18 +30,29 @@ function Pinball(domElement, def) {
 	});
 
 	this.domElement.appendChild(this.renderer.domElement);
+
+	console.log(this.world.getBodyList());
 }
 
 Pinball.prototype.start = function() {
 	this.world.step(1/ 25)
 	this.update();
-	this.renderer.render(this.scene, this.camera);
+	this.renderer.render(this.scene, this.elements.cameras[this.camera].object);
 	requestAnimationFrame(() => this.start());
 }
 
 Pinball.prototype.update = function() {
-	Object.keys(this.objects3D.balls).forEach(key => this.objects3D.balls[key].update());
-	Object.keys(this.objects3D.flippers).forEach(key => this.objects3D.flippers[key].update());
+	var camera = this.elements.cameras[this.camera];
+		ball = camera.follow.ball;
+
+	//if(ball) camera.update(this.elements.balls[ball].object.position);
+	Object.keys(this.elements.balls).forEach(key => {
+		var ball = this.elements.balls[key];
+
+		if(ball.inShuttle) ball.object.position.z = this.elements.shuttles[ball.inShuttle].getZ();
+		ball.update();
+	});
+	Object.keys(this.elements.flippers).forEach(key => this.elements.flippers[key].update());
 }
 
 Pinball.cameraTypes = {
@@ -71,31 +78,27 @@ Pinball.object3DTypes = {
 Pinball.prototype.createElement = function(type, id, def) {
 	var elementTypes = {
 		cameras: (id, def) => {
-			type = Object.keys(Pinball.cameraTypes).includes(def.type) ? def.type : 'PerspectiveCamera';
-
-			Pinball.cameraTypes[def.type]
-
-			this.cameras = Pinball.cameraTypes[def.type](def);
-			this.object.position.set(...def.position);
+			var camera = new Camera(def);
+			this.elements.cameras[id] = camera;
 		},
 		lights: (id, def) => {
 			type = Object.keys(Pinball.lightTypes).includes(def.type) ? def.type : 'AmbientLight';
 
 			def = setDefaults(def, lightDef);
 
-			var light = Pinball.lightTypes[def.type](def);
+			var light = Pinball.lightTypes[type](def);
 			light.position.set(...def.position);
 			light.lookAt(...def.lookAt);
 
 			this.scene.add(light);
-			this.lights[id] = light;
+			this.elements.lights[id] = light;
 		},
 		objects3D: (id, def) => {
 			type = Object.keys(Pinball.object3DTypes).includes(def.type) ? def.type : 'Stage';
 
-			var object3D = Pinball.object3DTypes[def.type](this.world, def);
+			var object3D = Pinball.object3DTypes[type](this.world, def);
 			this.scene.add(object3D.object);
-			this.objects3D[def.type.toLowerCase() + 's'][id] = object3D;
+			this.elements[type.toLowerCase() + 's'][id] = object3D;
 		}
 	}
 	elementTypes[type](id, def);
@@ -103,10 +106,11 @@ Pinball.prototype.createElement = function(type, id, def) {
 
 const cameraDef = {
 	fov: 45,
-	aspect: 1.19,
+	aspect: window.innerWidth / window.innerHeight,
 	near: 1,
 	far: 1000,
-	position: [0, 0, 0]
+	position: [0, 0, 0],
+	lookAt: [0, 0, 0],
 };
 
 const lightDef = {
@@ -130,6 +134,26 @@ const ballDef = {
 	position: [0, 0, 0],
 	mass: 1
 }
+
+function Camera(def) {
+	type = Object.keys(Pinball.cameraTypes).includes(def.type) ? def.type : 'PerspectiveCamera';
+
+	def = setDefaults(def, cameraDef);
+
+	this.object = Pinball.cameraTypes[type](def);
+	this.object.position.set(...def.position);
+	this.object.lookAt(...def.lookAt);
+
+	this.follow = def.follow;
+}
+
+Camera.prototype.update = function(ballPosition) {
+	var cameraPosition = this.object.position;
+
+	this.object.position.y = ballPosition.y + cameraPosition.y;
+	this.object.lookAt(0, ballPosition.y, 0);
+}
+
 
 function Object3D(world, def) {
     this.world = world;
@@ -173,6 +197,9 @@ function Ball(world, def) {
 	});
 
 	this.body.createFixture(pl.Circle(def.radius), def.mass);
+
+	this.inShuttle = def.shuttle;
+
 }
 
 Ball.prototype = Object.create(Object3D.prototype);
@@ -283,6 +310,8 @@ function Bouncer(world, def) {
 		position: Vec2(def.position[0], def.position[1])
 	});
 
+	console.log(this.body);
+
 	this.createFixture(this.body, def);
 
 	this.bouncing = def.bouncing;
@@ -309,6 +338,42 @@ function Bouncer(world, def) {
 }
 
 Bouncer.prototype = Object.create(Object3D.prototype);
+
+function Shuttle(world, def) {
+	Object3D.call(this, world, def);
+
+	this.type = 'Shuttle';
+
+	this.body = world.createBody({
+		position: Vec2(def.position[0], def.position[1])
+	});
+	this.createFixture(this.body, def);
+
+	this.sensor = world.createBody({
+		position: Vec2(def.position[0], def.position[1])
+	});
+	this.createFixture(this.sensor, def.sensor);
+	this.sensor.getFixtureList().setSensor(true);
+
+	world.on('end-contact', contact => {
+
+	});
+
+	this.activeKey = 32;
+	this.balls = def.balls;
+
+	document.body.addEventListener('keyup', evt => {
+		//if(evt.keyCode == this.activeKey)
+	});
+
+	this.z = def.position[2];
+}
+
+Shuttle.prototype = Object.create(Object3D.prototype);
+
+Shuttle.prototype.getZ = function() {
+	this.z;
+}
 
 /////////////////////////////////
 function setDefaults(to, from) {

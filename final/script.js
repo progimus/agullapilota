@@ -1,13 +1,17 @@
 window.onload = () => {
 	var level = {
-	    "camera": {
-	        "type": "PerspectiveCamera",
-	        "fov": 30,
-			"near": 1,
-			"far": 1000,
-			"position": [0, -125, 90]
-	    },
+	    "camera": "camera1",
 	    "elements": {
+			"cameras": {
+				"camera1": {
+					"fov": 30,
+					"position": [0, -125, 90],
+					"follow": {
+						"ball": "ball1",
+						"position": [0, -125, 90]
+					}
+				}
+			},
 	        "lights": {
 	            "light1": {
 	                "type": "DirectionalLight",
@@ -30,7 +34,8 @@ window.onload = () => {
 	        		"heightSegments": 20,
 	        		"color": "0xff00ff",
 	        		"position": [-7, 0, 0.5],
-	        		"mass": 1
+	        		"mass": 1,
+					"inShuttle": "shuttle1"
 	            },
 	            "leftFlipper": {
 	                "type": "Flipper",
@@ -72,7 +77,42 @@ window.onload = () => {
 	        				lines: baseGround.find(e => e.name == 'groundInt').lines
 	        			}
 	        		}
-	            }
+	            },
+				"bouncer1": {
+					"type": "Bouncer",
+					"dae": "models/circle.dae",
+					"position": [-7.66, 25.86, 0],
+					"points": circle.points,
+					"lines": circle.lines,
+					"bouncing": { "min": 8, "max": 15 }
+				},
+				"bouncer2": {
+					"type": "Bouncer",
+					"dae": "models/circle.dae",
+					"position": [0.75, 33.39, 0],
+					"points": circle.points,
+					"lines": circle.lines,
+					"bouncing": { "min": 8, "max": 15 }
+				},
+				"bouncer3": {
+					"type": "Bouncer",
+					"dae": "models/circle.dae",
+					"position": [-10, 36.87, 0],
+					"points": circle.points,
+					"lines": circle.lines,
+					"bouncing": { "min": 8, "max": 15 }
+				},
+				"shuttle1": {
+					"type": "Shuttle",
+					"dae": "models/shuttle.dae",
+					"position": [],
+					"points": shuttle.points,
+					"lines": shuttle.lines,
+					"sensor": {
+						"points": shuttleSensor.points,
+						"lines": shuttleSensor.lines
+					}
+				}
 	        }
 	    },
 	    "world": {
