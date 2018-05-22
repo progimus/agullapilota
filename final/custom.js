@@ -11,12 +11,15 @@ function Pinball(domElement, def) {
 	this.world = new pl.World(Vec2(...def.world.gravity));
 
 	this.elements = {
-		cameras: {},
-		lights: {},
-		balls: {},
-		flippers: {},
-		stages: {},
-		bouncers: {}
+		camera: {},
+		light: {},
+		ball: {},
+		flipper: {},
+		stage: {},
+		bouncer: {},
+		shuttle: {},
+		sensor: {},
+		ramp: {}
 	}
 
 	this.camera = def.camera;
@@ -30,29 +33,34 @@ function Pinball(domElement, def) {
 	});
 
 	this.domElement.appendChild(this.renderer.domElement);
-
-	console.log(this.world.getBodyList());
 }
 
 Pinball.prototype.start = function() {
 	this.world.step(1/ 25)
 	this.update();
-	this.renderer.render(this.scene, this.elements.cameras[this.camera].object);
+	this.renderer.render(this.scene, this.elements.camera[this.camera].object);
 	requestAnimationFrame(() => this.start());
 }
 
 Pinball.prototype.update = function() {
-	var camera = this.elements.cameras[this.camera];
+	var camera = this.elements.camera[this.camera];
 		ball = camera.follow.ball;
 
-	//if(ball) camera.update(this.elements.balls[ball].object.position);
-	Object.keys(this.elements.balls).forEach(key => {
-		var ball = this.elements.balls[key];
+	Object.keys(this.elements.ball).forEach(key => {
+		var ball = this.elements.ball[key],
+			inside = ball.getInside(),
+			insideObject = this.elements[inside.type][inside.id],
+			insideObjectZ = insideObject.getZ(ball.getY());
 
-		if(ball.inShuttle) ball.object.position.z = this.elements.shuttles[ball.inShuttle].getZ();
+		ball.setZ(insideObjectZ);
+
+		if(inside.type == 'shuttle' && insideObject.isActive()) {
+			ball.applyImpulse(insideObject.getForce());
+		}
+
 		ball.update();
 	});
-	Object.keys(this.elements.flippers).forEach(key => this.elements.flippers[key].update());
+	Object.keys(this.elements.flipper).forEach(key => this.elements.flipper[key].update());
 }
 
 Pinball.cameraTypes = {
@@ -72,14 +80,17 @@ Pinball.object3DTypes = {
 	Ball: function(world, def) { return new Ball(world, def); },
 	Flipper: function(world, def) { return new Flipper(world, def); },
 	Stage: function(world, def) { return new Stage(world, def); },
-	Bouncer: function(world, def) { return new Bouncer(world, def); }
+	Bouncer: function(world, def) { return new Bouncer(world, def); },
+	Shuttle: function(world, def) { return new Shuttle(world, def); },
+	Sensor: function(world, def) { return new Sensor(world, def); },
+	Ramp: function(world, def) { return new Ramp(world, def); }
 };
 
 Pinball.prototype.createElement = function(type, id, def) {
 	var elementTypes = {
 		cameras: (id, def) => {
 			var camera = new Camera(def);
-			this.elements.cameras[id] = camera;
+			this.elements.camera[id] = camera;
 		},
 		lights: (id, def) => {
 			type = Object.keys(Pinball.lightTypes).includes(def.type) ? def.type : 'AmbientLight';
@@ -91,14 +102,14 @@ Pinball.prototype.createElement = function(type, id, def) {
 			light.lookAt(...def.lookAt);
 
 			this.scene.add(light);
-			this.elements.lights[id] = light;
+			this.elements.light[id] = light;
 		},
 		objects3D: (id, def) => {
 			type = Object.keys(Pinball.object3DTypes).includes(def.type) ? def.type : 'Stage';
 
 			var object3D = Pinball.object3DTypes[type](this.world, def);
 			this.scene.add(object3D.object);
-			this.elements[type.toLowerCase() + 's'][id] = object3D;
+			this.elements[type.toLowerCase()][id] = object3D;
 		}
 	}
 	elementTypes[type](id, def);
@@ -154,20 +165,28 @@ Camera.prototype.update = function(ballPosition) {
 	this.object.lookAt(0, ballPosition.y, 0);
 }
 
-
 function Object3D(world, def) {
     this.world = world;
 
-	this.object = new THREE.Object3D();
+	this.object = new THREE.Object3D(); //Deberia estar dentro del div
+	if(def.dae) {
+		var loader = new THREE.ColladaLoader(),
+			that = this;
 
-	var loader = new THREE.ColladaLoader(),
-		that = this;
-
-	loader.load(def.dae, collada => {
-		that.object.add(collada.scene);
-	});
-	this.object.position.set(...def.position);
+		loader.load(def.dae, collada => {
+			that.object.add(collada.scene);
+		});
+		this.object.position.set(...def.position);
+	}
 }
+
+Object3D.fylterCategory = {
+	'ball': 0x0001,
+	'stage': 0x0002,
+	'ramp': 0x0004,
+	'shuttle': 0x0008,
+	'sensor': 0x0010
+};
 
 Object3D.prototype.createFixture = function(body, def) {
 	var points = def.points,
@@ -186,6 +205,22 @@ Object3D.prototype.createFixture = function(body, def) {
     }
 }
 
+Object3D.prototype.setFilterData = function(data) {
+	var fixture = this.body.getFixtureList();
+	while(fixture != null) {
+		fixture.setFilterData(data);
+		fixture = fixture.getNext();
+	}
+}
+
+Object3D.prototype.setSensor = function(sensor) {
+	var fixture = this.body.getFixtureList();
+	while(fixture != null) {
+		fixture.setSensor(sensor);
+		fixture = fixture.getNext();
+	}
+}
+
 function Ball(world, def) {
     Object3D.call(this, world, def);
 
@@ -197,8 +232,14 @@ function Ball(world, def) {
 	});
 
 	this.body.createFixture(pl.Circle(def.radius), def.mass);
+	this.setFilterData({
+		groupIndex: 0,
+		categoryBits: Object3D.fylterCategory.ball,
+		maskBits: Object3D.fylterCategory.ball | Object3D.fylterCategory.shuttle | Object3D.fylterCategory.sensor
+	});
 
-	this.inShuttle = def.shuttle;
+	this.body.setUserData({ inside: def.inside });
+	this.radius = def.radius;
 
 }
 
@@ -208,6 +249,23 @@ Ball.prototype.update = function() {
 	var position = this.body.getPosition();
 	this.object.position.x = position.x;
 	this.object.position.y = position.y;
+	this.object.position.z = this.z;
+}
+
+Ball.prototype.getY = function() {
+	return this.body.getPosition().y;
+}
+
+Ball.prototype.setZ = function(z) {
+	this.z = z + this.radius / 2;
+}
+
+Ball.prototype.getInside = function() {
+	return this.body.getUserData().inside;
+}
+
+Ball.prototype.applyImpulse = function(impulse) {
+	this.body.applyLinearImpulse(impulse, Vec2(0,0), true);
 }
 
 function Flipper(world, def) {
@@ -291,15 +349,22 @@ function Stage(world, def) {
 
     this.type = 'Stage';
 
-	this.bodys = {};
+	this.body = world.createBody();
+	this.createFixture(this.body, def);
+	this.setFilterData({
+		groupIndex: 0,
+		categoryBits: def.mask ? Object3D.fylterCategory[def.mask] : Object3D.fylterCategory.stage,
+		maskBits: 0xffff
+	});
 
-	Object.keys(def.bodys).forEach(bodyId => {
-        this.bodys[bodyId] = world.createBody();
-        this.createFixture(this.bodys[bodyId], def.bodys[bodyId]);
-    });
+	this.z = def.position[2];
 }
 
 Stage.prototype = Object.create(Object3D.prototype);
+
+Stage.prototype.getZ = function(y) {
+	return this.z;
+}
 
 function Bouncer(world, def) {
 	Object3D.call(this, world, def);
@@ -310,15 +375,17 @@ function Bouncer(world, def) {
 		position: Vec2(def.position[0], def.position[1])
 	});
 
-	console.log(this.body);
-
 	this.createFixture(this.body, def);
+	this.setFilterData({
+		groupIndex: 0,
+		categoryBits: Object3D.fylterCategory.stage,
+		maskBits: 0xffff
+	});
 
 	this.bouncing = def.bouncing;
 
 	world.on('end-contact', contact => {
 		if(this.body == contact.getFixtureA().getBody()) {
-			console.log('collide');
 			var ball = contact.getFixtureB().getBody(),
 				velocity = ball.getLinearVelocity(),
 				impulse = velocity.mul(1.5);
@@ -348,22 +415,16 @@ function Shuttle(world, def) {
 		position: Vec2(def.position[0], def.position[1])
 	});
 	this.createFixture(this.body, def);
-
-	this.sensor = world.createBody({
-		position: Vec2(def.position[0], def.position[1])
-	});
-	this.createFixture(this.sensor, def.sensor);
-	this.sensor.getFixtureList().setSensor(true);
-
-	world.on('end-contact', contact => {
-
+	this.setFilterData({
+		groupIndex: 0,
+		categoryBits: Object3D.fylterCategory.shuttle,
+		maskBits: 0xffff
 	});
 
-	this.activeKey = 32;
-	this.balls = def.balls;
+	this.force = Vec2(...def.force);
 
 	document.body.addEventListener('keyup', evt => {
-		//if(evt.keyCode == this.activeKey)
+		if(evt.keyCode == def.activeKey) this.active = true;
 	});
 
 	this.z = def.position[2];
@@ -372,7 +433,115 @@ function Shuttle(world, def) {
 Shuttle.prototype = Object.create(Object3D.prototype);
 
 Shuttle.prototype.getZ = function() {
-	this.z;
+	return this.z;
+}
+
+Shuttle.prototype.isActive = function() {
+	return this.active;
+}
+
+Shuttle.prototype.getForce = function() {
+	return this.force;
+}
+
+function Sensor(world, def) {
+	Object3D.call(this, world, def);
+
+	this.type = 'Sensor';
+
+	this.body = world.createBody({
+		position: Vec2(def.position[0], def.position[1])
+	});
+	this.createFixture(this.body, def);
+	this.setFilterData({
+		groupIndex: 0,
+		categoryBits: Object3D.fylterCategory.sensor,
+		maskBits: 0xffff
+	});
+	this.setSensor(true);
+
+	this.body.setUserData({ from: def.from, to: def.to });
+
+	world.on('end-contact', contact => {
+		var ball = contact.getFixtureB().getBody(),
+			sensor = contact.getFixtureA().getBody();
+
+		if(sensor == this.body) {
+			var inside = ball.getUserData().inside;
+			ball.setUserData(inside.id == def.from.id ? { inside: def.to } : { inside: def.from });
+			ball.getFixtureList().setFilterData({
+				groupIndex: 0,
+				categoryBits: Object3D.fylterCategory.ball,
+				maskBits: Object3D.fylterCategory.ball | Object3D.fylterCategory.stage | Object3D.fylterCategory.sensor
+			});
+		}
+	});
+}
+
+Sensor.prototype = Object.create(Object3D.prototype);
+
+Sensor.prototype.getFrom = function() {
+	return this.body.getUserData().from;
+}
+
+Sensor.prototype.getTo = function() {
+	return this.body.getUserData().to;
+}
+
+function Ramp(world, def) {
+	Object3D.call(this, world, def);
+
+	this.type = 'Ramp';
+
+	this.body = world.createBody({
+		position: Vec2(def.position[0], def.position[1])
+	});
+	this.createFixture(this.body, def);
+	this.setFilterData({
+		groupIndex: 0,
+		categoryBits: Object3D.fylterCategory.ramp,
+		maskBits: 0xffff
+	});
+
+	this.createHeightMap(def);
+
+	console.table(this.heightMap);
+}
+
+Ramp.prototype = Object.create(Object3D.prototype);
+
+Ramp.prototype.createHeightMap = function(def) {
+	this.heightMap = [];
+	for(var i = 0; i < def.lines.length; i += 2) {
+        let index1 = def.lines[i] * 3,
+			index2 = def.lines[i + 1] * 3;
+
+        if(def.points[index1 + 2] > def.points[index2 + 2]) {
+            index2 = def.lines[i] * 3;
+            index1 = def.lines[i + 1] * 3;
+        }
+
+		this.heightMap.push({
+            z1: def.points[index1 + 1],
+            y1: def.points[index1 + 2],
+            z2: def.points[index2 + 1],
+            y2: def.points[index2 + 2]
+		});
+	}
+}
+
+Ramp.prototype.getZ = function(y) {
+	for(position of this.heightMap) {
+        if(position.y1 < y && position.y2 > y) {
+            let distance = Math.abs(position.y2 - position.y1);
+            let distance2 = Math.abs(position.y1 - (y + 0.5));
+            let porcentaje = distance2 / distance;
+            let lol =  Math.abs(position.z1 - position.z2);
+            let z = position.z1 - (lol * porcentaje);
+            return -z;
+            //console.log(ballPosition.y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
+        }
+	}
 }
 
 /////////////////////////////////

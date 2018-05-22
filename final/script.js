@@ -33,9 +33,13 @@ window.onload = () => {
 	        		"widthSegments": 20,
 	        		"heightSegments": 20,
 	        		"color": "0xff00ff",
-	        		"position": [-7, 0, 0.5],
+	        		"position": [22.5, -45, 5],
+					//"position": [7, 0, 1],
 	        		"mass": 1,
-					"inShuttle": "shuttle1"
+					"inside": {
+						"type": "shuttle",
+						"id": "shuttle1"
+					}
 	            },
 	            "leftFlipper": {
 	                "type": "Flipper",
@@ -67,16 +71,8 @@ window.onload = () => {
 	                "type": "Stage",
 	        		"dae": "models/supreme.dae",
 	        		"position": [0, 0, 0],
-	        		"bodys": {
-	        			"body1": {
-	        				points: baseGround.find(e => e.name == 'groundExt').points,
-	        				lines: baseGround.find(e => e.name == 'groundExt').lines
-	        			},
-	        			"body2": {
-	        				points: baseGround.find(e => e.name == 'groundInt').points,
-	        				lines: baseGround.find(e => e.name == 'groundInt').lines
-	        			}
-	        		}
+					"points": stage.points,
+					"lines": stage.lines
 	            },
 				"bouncer1": {
 					"type": "Bouncer",
@@ -105,13 +101,80 @@ window.onload = () => {
 				"shuttle1": {
 					"type": "Shuttle",
 					"dae": "models/shuttle.dae",
-					"position": [],
+					"position": [21, -47.5, 1.5],
 					"points": shuttle.points,
 					"lines": shuttle.lines,
-					"sensor": {
-						"points": shuttleSensor.points,
-						"lines": shuttleSensor.lines
+					"activeKey": 32,
+					"force": [0, 163]
+				},
+				"shuttleSensor": {
+					"type": "Sensor",
+					"position": [0, 0, 0],
+					"points": shuttleSensor.points,
+					"lines": shuttleSensor.lines,
+					"from": {
+						"type": "shuttle",
+						"id": "shuttle1"
+					},
+					"to": {
+						"type": "stage",
+						"id": "stage1"
 					}
+				},
+				"sensorLeft1": {
+					"type": "Sensor",
+					"position": [0, 0, 0],
+					"points": sensorLeft1.points,
+					"lines": sensorLeft1.lines,
+					"from": {
+						"type": "stage",
+						"id": "stage1"
+					},
+					"to": {
+						"type": "ramp",
+						"id": "rampLeft"
+					}
+				},
+				"sensorLeft2": {
+					"type": "Sensor",
+					"position": [0, 0, 0],
+					"points": sensorLeft2.points,
+					"lines": sensorLeft2.lines,
+					"from": {
+						"type": "ramp",
+						"id": "rampLeft"
+					},
+					"to": {
+						"type": "stage",
+						"id": "rampLeftStage"
+					}
+				},
+				"sensorLeft3": {
+					"type": "Sensor",
+					"position": [0, 0, 0],
+					"points": sensorLeft3.points,
+					"lines": sensorLeft3.lines,
+					"from": {
+						"type": "stage",
+						"id": "rampLeftStage"
+					},
+					"to": {
+						"type": "stage",
+						"id": "stage1"
+					}
+				},
+				"rampLeft": {
+					"type": "Ramp",
+					"position": [0, 0, 0],
+					"points": rampLeft.points,
+					"lines": rampLeft.lines
+				},
+				"rampLeftStage": {
+					"type": "Stage",
+					"position": [0, 0, 7.5],
+					"points": rampLeftTop.points,
+					"lines": rampLeftTop.lines,
+					"mask": "ramp"
 				}
 	        }
 	    },
