@@ -36,7 +36,7 @@ function Pinball(domElement, def) {
 }
 
 Pinball.prototype.start = function() {
-	this.world.step(1/ 25)
+	this.world.step(1 / 25);
 	this.update();
 	this.renderer.render(this.scene, this.elements.camera[this.camera].object);
 	requestAnimationFrame(() => this.start());
@@ -48,11 +48,12 @@ Pinball.prototype.update = function() {
 
 	Object.keys(this.elements.ball).forEach(key => {
 		var ball = this.elements.ball[key],
+			ballZ = ball.getZ(),
 			inside = ball.getInside(),
 			insideObject = this.elements[inside.type][inside.id],
 			insideObjectZ = insideObject.getZ(ball.getY());
 
-		ball.setZ(insideObjectZ);
+		ball.setZ(inside.type == 'stage' && ballZ > insideObjectZ ? ballZ - 0.5 : insideObjectZ);
 
 		if(inside.type == 'shuttle' && insideObject.isActive()) {
 			ball.applyImpulse(insideObject.getForce());
@@ -184,8 +185,8 @@ Object3D.fylterCategory = {
 	'ball': 0x0001,
 	'stage': 0x0002,
 	'ramp': 0x0004,
-	'shuttle': 0x0008,
-	'sensor': 0x0010
+	'sensor': 0x0008,
+	'shuttle': 0x0010,
 };
 
 Object3D.prototype.createFixture = function(body, def) {
@@ -235,7 +236,7 @@ function Ball(world, def) {
 	this.setFilterData({
 		groupIndex: 0,
 		categoryBits: Object3D.fylterCategory.ball,
-		maskBits: Object3D.fylterCategory.ball | Object3D.fylterCategory.shuttle | Object3D.fylterCategory.sensor
+		maskBits: Object3D.fylterCategory.ball | Object3D.fylterCategory.sensor | Object3D.fylterCategory.shuttle
 	});
 
 	this.body.setUserData({ inside: def.inside });
@@ -257,7 +258,11 @@ Ball.prototype.getY = function() {
 }
 
 Ball.prototype.setZ = function(z) {
-	this.z = z + this.radius / 2;
+	this.z = z + this.radius;
+}
+
+Ball.prototype.getZ = function() {
+	return this.z - this.radius;
 }
 
 Ball.prototype.getInside = function() {
@@ -455,7 +460,7 @@ function Sensor(world, def) {
 	this.createFixture(this.body, def);
 	this.setFilterData({
 		groupIndex: 0,
-		categoryBits: Object3D.fylterCategory.sensor,
+		categoryBits: Object3D.fylterCategory[def.mask],
 		maskBits: 0xffff
 	});
 	this.setSensor(true);
@@ -472,7 +477,7 @@ function Sensor(world, def) {
 			ball.getFixtureList().setFilterData({
 				groupIndex: 0,
 				categoryBits: Object3D.fylterCategory.ball,
-				maskBits: Object3D.fylterCategory.ball | Object3D.fylterCategory.stage | Object3D.fylterCategory.sensor
+				maskBits: Object3D.fylterCategory.ball | Object3D.fylterCategory.sensor | Object3D.fylterCategory[ball.getUserData().inside.mask]
 			});
 		}
 	});
@@ -499,13 +504,11 @@ function Ramp(world, def) {
 	this.createFixture(this.body, def);
 	this.setFilterData({
 		groupIndex: 0,
-		categoryBits: Object3D.fylterCategory.ramp,
+		categoryBits: Object3D.fylterCategory[def.mask],
 		maskBits: 0xffff
 	});
 
 	this.createHeightMap(def);
-
-	console.table(this.heightMap);
 }
 
 Ramp.prototype = Object.create(Object3D.prototype);

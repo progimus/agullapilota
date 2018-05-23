@@ -34,9 +34,9 @@ window.onload = () => {
 	        		"heightSegments": 20,
 	        		"color": "0xff00ff",
 	        		"position": [22.5, -45, 5],
-					//"position": [7, 0, 1],
 	        		"mass": 1,
 					"inside": {
+						"mask": "shuttle",
 						"type": "shuttle",
 						"id": "shuttle1"
 					}
@@ -112,11 +112,14 @@ window.onload = () => {
 					"position": [0, 0, 0],
 					"points": shuttleSensor.points,
 					"lines": shuttleSensor.lines,
+					"mask": "sensor",
 					"from": {
+						"mask": "shuttle",
 						"type": "shuttle",
 						"id": "shuttle1"
 					},
 					"to": {
+						"mask": "stage",
 						"type": "stage",
 						"id": "stage1"
 					}
@@ -126,11 +129,14 @@ window.onload = () => {
 					"position": [0, 0, 0],
 					"points": sensorLeft1.points,
 					"lines": sensorLeft1.lines,
+					"mask": "sensor",
 					"from": {
+						"mask": "stage",
 						"type": "stage",
 						"id": "stage1"
 					},
 					"to": {
+						"mask": "ramp",
 						"type": "ramp",
 						"id": "rampLeft"
 					}
@@ -140,11 +146,14 @@ window.onload = () => {
 					"position": [0, 0, 0],
 					"points": sensorLeft2.points,
 					"lines": sensorLeft2.lines,
+					"mask": "sensor",
 					"from": {
+						"mask": "ramp",
 						"type": "ramp",
 						"id": "rampLeft"
 					},
 					"to": {
+						"mask": "ramp",
 						"type": "stage",
 						"id": "rampLeftStage"
 					}
@@ -154,11 +163,14 @@ window.onload = () => {
 					"position": [0, 0, 0],
 					"points": sensorLeft3.points,
 					"lines": sensorLeft3.lines,
+					"mask": "ramp",
 					"from": {
+						"mask": "ramp",
 						"type": "stage",
 						"id": "rampLeftStage"
 					},
 					"to": {
+						"mask": "stage",
 						"type": "stage",
 						"id": "stage1"
 					}
