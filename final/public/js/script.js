@@ -112,7 +112,7 @@ window.onload = () => {
 					"position": [0, 0, 0],
 					"points": shuttleSensor.points,
 					"lines": shuttleSensor.lines,
-					"mask": "sensor",
+					"mask": "shuttle",
 					"from": {
 						"mask": "shuttle",
 						"type": "shuttle",
