@@ -3,7 +3,7 @@ const express = require('express'),
     http = require('http').Server(app),
     io = require('socket.io')(http),
     Pinball = require('./pinball.js'),
-    physics = require('./physics.js');
+    physics = require('./public/levels/multiplayer/level1/physics.js');
 
 app.set('view engine', 'ejs');
 app.use(express.static(__dirname + '/public'));
@@ -13,7 +13,7 @@ app.get('/', (req, res) => {
 });
 
 app.get('/multiplayer', (req, res) => {
-    res.render('multiplayer');
+    res.render('multiplayer', { elementsUrl: 'levels/multiplayer/level1/elements.js' });
 });
 
 var players = [];
@@ -22,54 +22,7 @@ io.on('connection', socket => {
     console.log('User connected');
     players.push(socket.id);
     if(players.length == 1) {
-        var pinball = new Pinball({
-            player1: {
-                flippers: ['flipperPlayer1Left'],
-                flippers: ['flipperPlayer1Right']
-            },
-            player2: {
-                flippers: ['flipperPlayer1Left'],
-                flippers: ['flipperPlayer1Right']
-            },
-            world: {
-                gravity: [0, -10]
-            },
-            physics: {
-                ball1: {
-                    type: 'ball',
-                    position: { x: 7, y: 100, z: 2.5 },
-                    radius: 2.5
-                },
-                stage: {
-                    type: 'stage',
-                    position: { x: 0, y: 0, z: 0 },
-                    points: physics.stage1.points,
-                    lines: physics.stage1.lines
-                },
-                p1leftFlipper: {
-                    type: "flipper",
-                    position: { x: 30.9, y: 8.29, z: 3 },
-                    mass: 50,
-                    points: physics.leftFlipper.points,
-                    lines: physics.leftFlipper.lines,
-                    active: false,
-                    orientation: "right",
-                    velocity: { "down": -30, "up": 30 },
-                    limits: { "lower": -0.52, "upper": 0.52 }
-                },
-                p1rightFlipper: {
-                    type: "flipper",
-                    position: { x: 54.10, y: 8.29, z: 3 },
-                    mass: 50,
-                    points: physics.rightFlipper.points,
-                    lines: physics.rightFlipper.lines,
-                    active: false,
-                    orientation: "left",
-                    velocity: { "down": 30, "up": -30 },
-                    limits: { "lower": -0.52, "upper": 0.52 }
-                }
-            }
-        });
+        var pinball = new Pinball(physics);
 
         socket.on('flipper', function(data) {
             console.log(data);

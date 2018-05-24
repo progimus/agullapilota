@@ -4,7 +4,7 @@ const pl = require('./public/libs/planck'),
 module.exports = Pinball;
 
 function Pinball(def) {
-    this.world = new pl.World(Vec2(...def.world.gravity));
+    this.world = new pl.World(Vec2(def.world.gravity.x, def.world.gravity.y));
 
     this.physics = {
         ball: {},
@@ -65,12 +65,14 @@ Physic.types = {
 }
 
 function Physic(world, def) {
-    console.log(def.position);
     this.body = world.createBody({
-		position: Vec2(def.position.x, def.position.y),
+		position: Vec2(def.position.x, def.position.y)
 	});
 
-    if(def.points && def.lines) this.createFixture(this.body, def);
+    if(def.points && def.lines) {
+        console.log('asd');
+        this.createFixture(this.body, def);
+    }
 
     this.position = def.position;
 }
@@ -167,9 +169,9 @@ Ball.prototype.applyImpulse = function(impulse) {
 function Flipper(world, def) {
     Physic.call(this, world, def);
     this.body.setDynamic();
+    this.body.setBullet(true);
 
 	this.body.createFixture(pl.Circle(1), def.mass);
-	this.createFixture(this.body, def);
 
 	this.orientation = def.orientation;
 	this.velocity = { down: def.velocity.down, up: def.velocity.up };
@@ -185,7 +187,7 @@ function Flipper(world, def) {
 		maxMotorTorque: 150000
 	};
 
-	this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position[0], def.position[1])));
+	this.motor = world.createJoint(pl.RevoluteJoint(optionJoint, world.createBody(), this.body, Vec2(def.position.x, def.position.y)));
 }
 
 Flipper.prototype = Object.create(Physic.prototype);

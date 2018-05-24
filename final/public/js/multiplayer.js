@@ -8,38 +8,33 @@ window.onload = () => {
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
 
-    scene.add(new THREE.AmbientLight());
-    var light = new THREE.DirectionalLight();
-    light.position.set(85 / 2, -160, 100);
-    light.lookAt(85 / 2, 264 / 2 ,0)
-    scene.add(light);
+    Object.entries(elements.lights)
+        .forEach(element => {
+            var id = element[0],
+                def = element[1];
+
+            def = setDefaults(def, lightDef);
+
+            var light = lightTypes[def.type](def);
+            light.position.set(...Object.values(def.position));
+            light.lookAt(...Object.values(def.lookAt));
+            scene.add(light);
+        });
 
     var loader = new THREE.ColladaLoader();
-    loader.load('models/multiplayer.dae', collada => {
-        scene.add(collada.scene);
-    });
+    Object.entries(elements.objects3D)
+        .forEach(element => {
+            var id = element[0],
+                dae = element[1];
 
-    var p1FlipperLeft = new THREE.Object3D();
-    var p1FlipperRight = new THREE.Object3D();
+            var object = new THREE.Object3D();
+            object.name = id;
 
-
-    loader.load('models/mFlipperLeft.dae', collada => {
-        p1FlipperLeft.add(collada.scene);
-        p1FlipperLeft.position.set(30.9, 8.29, 3)
-        scene.add(p1FlipperLeft)
-    })
-
-    loader.load('models/mFlipperRight.dae', collada => {
-        p1FlipperRight.add(collada.scene);
-        p1FlipperRight.position.set(54.10, 8.29, 3)
-        scene.add(p1FlipperRight)
-    })
-
-    var ball = new THREE.Mesh(
-        new THREE.SphereGeometry(2.5, 32, 32),
-        new THREE.MeshBasicMaterial({ color: 0xffff00 })
-    );
-    scene.add(ball);
+            loader.load(dae, model => {
+                object.add(model.scene);
+                scene.add(object);
+            });
+        });
 
     var animate = () => {
         requestAnimationFrame(animate);
@@ -51,16 +46,13 @@ window.onload = () => {
     var socket = io();
 
     socket.on('update', (data) => {
-        //console.log(data.p1leftFlipper.p)
+        console.log(data.p1leftFlipper.a)
         ball.position.set(...Object.values(data.ball1.p))
-        p1FlipperLeft.position.set(...Object.values(data.p1leftFlipper.p))
-        p1FlipperRight.position.set(...Object.values(data.p1rightFlipper.p))
         p1FlipperLeft.rotation.z = data.p1leftFlipper.a;
         p1FlipperRight.rotation.z = data.p1rightFlipper.a;
     });
 
     document.body.addEventListener('keydown', evt => {
-        console.log(evt.keyCode)
         if(evt.keyCode == 37) socket.emit('flipper', { active: true, id: 'p1leftFlipper' });
         if(evt.keyCode == 39) socket.emit('flipper', { active: true, id: 'p1rightFlipper' });
     });
@@ -69,4 +61,36 @@ window.onload = () => {
         if(evt.keyCode == 37) socket.emit('flipper', { active: false, id: 'p1leftFlipper' });
         if(evt.keyCode == 39) socket.emit('flipper', { active: false, id: 'p1rightFlipper' });
     });
+}
+
+const lightTypes = {
+	AmbientLight: function(def) { return new THREE.AmbientLight(def.color, def.intensity); },
+	DirectionalLight: function(def) { return new THREE.DirectionalLight(def.color, def.intensity); },
+	HemisphereLight: function(def) { return new THREE.HemisphereLight(def.skyColor, def.groundColor, def.intensity); },
+	PointLight: function(def) { return new THREE.HemisphereLight(def.color, def.intensity, def.distance, def.decay); },
+	RectAreaLight: function(def) { return new THREE.RectAreaLight(def.color, def.intensity, def.width, def.height); },
+	SpotLight: function(def) { return new THREE.SpotLight( def.color, def.intensity, def.distance, def.angle, def.penumbra, def.decay); }
+}
+
+const lightDef = {
+    type: 'AmbientLight',
+	color: 0xffffff,
+	intensity: 1,
+	skyColor: 0xffffff,
+	groundColor: 0xffffff,
+	distance: 0,
+	decay: 1,
+	width: 10,
+	height: 10,
+	position: [0, 0, 0],
+	lookAt: [0, 0, 0]
+}
+
+function setDefaults(to, from) {
+    console.log(to, from)
+	to = to || {};
+
+	Object.keys(from).forEach(key => to[key] = to[key] || from[key]);
+
+	return to;
 }
