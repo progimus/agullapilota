@@ -1,7 +1,7 @@
 window.onload = () => {
     var scene = new THREE.Scene();
     var camera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 0.1, 1000);
-    camera.position.set(85 / 2, -160, 100)
+    camera.position.set(85 / 2, -180, 100)
     camera.lookAt(85 / 2, 264 / 2 ,0)
 
     var renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -9,9 +9,9 @@ window.onload = () => {
     document.body.appendChild(renderer.domElement);
 
     Object.entries(elements.lights)
-        .forEach(element => {
-            var id = element[0],
-                def = element[1];
+        .forEach(e => {
+            var id = e[0],
+                def = e[1];
 
             def = setDefaults(def, lightDef);
 
@@ -23,9 +23,9 @@ window.onload = () => {
 
     var loader = new THREE.ColladaLoader();
     Object.entries(elements.objects3D)
-        .forEach(element => {
-            var id = element[0],
-                dae = element[1];
+        .forEach(e => {
+            var id = e[0],
+                dae = e[1];
 
             var object = new THREE.Object3D();
             object.name = id;
@@ -36,6 +36,7 @@ window.onload = () => {
             });
         });
 
+
     var animate = () => {
         requestAnimationFrame(animate);
         renderer.render(scene, camera);
@@ -45,11 +46,17 @@ window.onload = () => {
 
     var socket = io();
 
-    socket.on('update', (data) => {
-        console.log(data.p1leftFlipper.a)
-        ball.position.set(...Object.values(data.ball1.p))
-        p1FlipperLeft.rotation.z = data.p1leftFlipper.a;
-        p1FlipperRight.rotation.z = data.p1rightFlipper.a;
+    socket.on('update', data => {
+        Object.entries(data)
+            .forEach(e => {
+                var id = e[0],
+                    def = e[1];
+
+                var obj = scene.children.find(e => e.name == id);
+
+                if(def.p) obj.position.set(...Object.values(def.p));
+                if(def.a) obj.rotation.z = def.a;
+            });
     });
 
     document.body.addEventListener('keydown', evt => {
@@ -87,7 +94,6 @@ const lightDef = {
 }
 
 function setDefaults(to, from) {
-    console.log(to, from)
 	to = to || {};
 
 	Object.keys(from).forEach(key => to[key] = to[key] || from[key]);

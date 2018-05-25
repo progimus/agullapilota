@@ -3,13 +3,20 @@ const pl = require('./public/libs/planck'),
 
 module.exports = Pinball;
 
+//const pl = planck,
+//    Vec2 = pl.Vec2;
+
 function Pinball(def) {
     this.world = new pl.World(Vec2(def.world.gravity.x, def.world.gravity.y));
 
     this.physics = {
         ball: {},
         flipper: {},
-        stage: {}
+        stage: {},
+        bouncer: {},
+        sensor: {},
+        ramp: {},
+        gravitySensor: {}
     }
 
     Object.keys(def.physics).forEach(id => {
@@ -19,21 +26,28 @@ function Pinball(def) {
 }
 
 Pinball.prototype.update = function() {
+    this.world.step(1 / 25);
+
     var res = {}
     var balls = this.physics.ball,
         flippers = this.physics.flipper;
 
 	Object.keys(balls).forEach(id => {
         var ball = balls[id];
-		/*var ball = this.physics.ball[key],
 			ballZ = ball.getZ(),
 			inside = ball.getInside(),
 			insideObject = this.physics[inside.type][inside.id],
 			insideObjectZ = insideObject.getZ(ball.getY());
+        console.log(insideObjectZ);
+        if(inside.type == 'ramp') console.log(insideObjectZ);
 
-		ball.setZ(inside.type == 'stage' && ballZ > insideObjectZ ? ballZ - 0.5 : insideObjectZ);
+		ball.setZ(inside.type == 'stage' &&
+            ballZ > insideObjectZ &&
+            Math.abs(ballZ - insideObjectZ) > 0.5 ?
+            ballZ - 0.5 : insideObjectZ
+        );
 
-		if(inside.type == 'shuttle' && insideObject.isActive()) {
+		/*if(inside.type == 'shuttle' && insideObject.isActive()) {
 			ball.applyImpulse(insideObject.getForce());
 		}*/
 		ball.update();
@@ -46,7 +60,6 @@ Pinball.prototype.update = function() {
         res[id] = { p: flipper.getPosition(), a: flipper.getAngle() };
     });
 
-    this.world.step(1000 / 25);
     return res;
 }
 
@@ -61,7 +74,8 @@ Physic.types = {
     bouncer: function(world, def) { return new Bouncer(world, def); },
     shuttle: function(world, def) { return new Shuttle(world, def); },
     sensor: function(world, def) { return new Sensor(world, def); },
-    ramp: function(world, def) { return new Ramp(world, def); }
+    ramp: function(world, def) { return new Ramp(world, def); },
+    gravitySensor: function(world, def) { return new GravitySensor(world, def); }
 }
 
 function Physic(world, def) {
@@ -69,10 +83,7 @@ function Physic(world, def) {
 		position: Vec2(def.position.x, def.position.y)
 	});
 
-    if(def.points && def.lines) {
-        console.log('asd');
-        this.createFixture(this.body, def);
-    }
+    if(def.points && def.lines) this.createFixture(this.body, def);
 
     this.position = def.position;
 }
@@ -124,7 +135,9 @@ Physic.prototype.setSensor = function(sensor) {
 
 function Ball(world, def) {
     Physic.call(this, world, def);
+
     this.body.setDynamic();
+    this.body.setBullet(true);
 
 	this.body.createFixture(pl.Circle(def.radius), def.mass);
 	this.setFilterData({
@@ -171,7 +184,9 @@ function Flipper(world, def) {
     this.body.setDynamic();
     this.body.setBullet(true);
 
+
 	this.body.createFixture(pl.Circle(1), def.mass);
+    this.createFixture(this.body, def);
 
 	this.orientation = def.orientation;
 	this.velocity = { down: def.velocity.down, up: def.velocity.up };
@@ -193,36 +208,35 @@ function Flipper(world, def) {
 Flipper.prototype = Object.create(Physic.prototype);
 
 Flipper.prototype.update = function() {
-	this.body.setFixedRotation(false);
+    this.body.setFixedRotation(false);
 
-	if(this.orientation == 'right') {
-		if(this.active) {
-			if(this.motor.getJointAngle() >= this.limits.upper) {
-				this.body.setAngle(this.limits.upper);
-				this.body.setFixedRotation(true);
-			}
-		} else {
-			if(this.motor.getJointAngle() <= this.limits.lower) {
-				this.body.setAngle(this.limits.lower);
-				this.body.setFixedRotation(true);
-			}
-		}
-	} else {
-		if(this.active) {
-			if(this.motor.getJointAngle() <= this.limits.lower) {
-				this.body.setAngle(this.limits.lower);
-				this.body.setFixedRotation(true);
-			}
-		} else {
-			if(this.motor.getJointAngle() >= this.limits.upper) {
-				this.body.setAngle(this.limits.upper);
-				this.body.setFixedRotation(true);
-			}
-		}
-	}
+    if(this.orientation == 'right') {
+        if(this.active) {
+            if(this.motor.getJointAngle() >= this.limits.upper) {
+                this.body.setAngle(this.limits.upper);
+                this.body.setFixedRotation(true);
+            }
+        } else {
+            if(this.motor.getJointAngle() <= this.limits.lower) {
+                this.body.setAngle(this.limits.lower);
+                this.body.setFixedRotation(true);
+            }
+        }
+    } else {
+        if(this.active) {
+            if(this.motor.getJointAngle() <= this.limits.lower) {
+                this.body.setAngle(this.limits.lower);
+                this.body.setFixedRotation(true);
+            }
+        } else {
+            if(this.motor.getJointAngle() >= this.limits.upper) {
+                this.body.setAngle(this.limits.upper);
+                this.body.setFixedRotation(true);
+            }
+        }
+    }
 
-	this.motor.setMotorSpeed(this.active ? this.velocity.up : this.velocity.down);
-
+    this.motor.setMotorSpeed(this.active ? this.velocity.up : this.velocity.down);
     this.angle = this.motor.getJointAngle();
 }
 
@@ -250,7 +264,6 @@ Stage.prototype.getZ = function(y) {
 	return this.position.z;
 }
 
-/*
 function Bouncer(world, def) {
     Physic.call(this, world, def);
 
@@ -285,7 +298,7 @@ function Bouncer(world, def) {
 
 Bouncer.prototype = Object.create(Physic.prototype);
 
-function Shuttle(world, def) {
+/*function Shuttle(world, def) {
     Physic.call(this, world, def);
 
 	this.createFixture(this.body, def);
@@ -314,28 +327,35 @@ Shuttle.prototype.isActive = function() {
 
 Shuttle.prototype.getForce = function() {
 	return this.force;
-}
+}*/
 
 function Sensor(world, def) {
     Physic.call(this, world, def);
 
-	this.createFixture(this.body, def);
 	this.setFilterData({
 		groupIndex: 0,
 		categoryBits: Physic.fylterCategory[def.mask],
 		maskBits: 0xffff
 	});
+
 	this.setSensor(true);
 
-	this.body.setUserData({ from: def.from, to: def.to });
+	this.body.setUserData({ from: def.in, to: def.out });
 
 	world.on('end-contact', contact => {
 		var ball = contact.getFixtureB().getBody(),
 			sensor = contact.getFixtureA().getBody();
 
 		if(sensor == this.body) {
-			var inside = ball.getUserData().inside;
-			ball.setUserData(inside.id == def.from.id ? { inside: def.to } : { inside: def.from });
+			var inside = ball.getUserData().inside,
+                ballVelocity = ball.getLinearVelocity(),
+                ballGravity = ball.getGravityScale();
+
+            if(ballGravity == 1)
+                ball.setUserData(ballVelocity.y < 0 ? { inside: def.out } : { inside: def.in });
+            else
+                ball.setUserData(ballVelocity.y > 0 ? { inside: def.out } : { inside: def.in });
+
 			ball.getFixtureList().setFilterData({
 				groupIndex: 0,
 				categoryBits: Physic.fylterCategory.ball,
@@ -355,6 +375,24 @@ Sensor.prototype.getTo = function() {
 	return this.body.getUserData().to;
 }
 
+function GravitySensor(world, def) {
+    Physic.call(this, world, def);
+
+	this.setSensor(true);
+
+	world.on('end-contact', contact => {
+		var ball = contact.getFixtureB().getBody(),
+			sensor = contact.getFixtureA().getBody();
+
+		if(sensor == this.body) {
+            var ballVelocity = ball.getLinearVelocity();
+            ball.setGravityScale(ballVelocity.y < 0 ? 1 : -1);
+        }
+	});
+}
+
+GravitySensor.prototype = Object.create(Physic.prototype);
+
 function Ramp(world, def) {
     Physic.call(this, world, def);
 
@@ -365,41 +403,51 @@ function Ramp(world, def) {
 		maskBits: 0xffff
 	});
 
-	this.createHeightMap(def);
+	this.createHeightMap(def.heightMap);
 }
 
 Ramp.prototype = Object.create(Physic.prototype);
 
 Ramp.prototype.createHeightMap = function(def) {
 	this.heightMap = [];
-	for(var i = 0; i < def.lines.length; i += 2) {
-        let index1 = def.lines[i] * 3,
-			index2 = def.lines[i + 1] * 3;
 
-        if(def.points[index1 + 2] > def.points[index2 + 2]) {
-            index2 = def.lines[i] * 3;
-            index1 = def.lines[i + 1] * 3;
+    var points = def.points,
+        lines = def.lines;
+	for(var i = 0; i < lines.length; i += 2) {
+        let index1 = lines[i] * 3,
+			index2 = lines[i + 1] * 3;
+
+        if(points[index1 + 2] > points[index2 + 2]) {
+            index2 = lines[i] * 3;
+            index1 = lines[i + 1] * 3;
         }
 
 		this.heightMap.push({
-            z1: def.points[index1 + 1],
-            y1: def.points[index1 + 2],
-            z2: def.points[index2 + 1],
-            y2: def.points[index2 + 2]
+            z1: points[index1 + 1],
+            y1: points[index1 + 2],
+            z2: points[index2 + 1],
+            y2: points[index2 + 2]
 		});
 	}
+
+    this.heightMap = this.heightMap.sort((a, b) => a.y1 - b.y1);
+    //this.heightMap.forEach(e => console.log(e.y1, e.z1, e.z2))
+    //console.log();
 }
 
 Ramp.prototype.getZ = function(y) {
 	for(position of this.heightMap) {
+        //console.log(position.y1, y, position.y2)
         if(position.y1 < y && position.y2 > y) {
             let distance = Math.abs(position.y2 - position.y1);
-            let distance2 = Math.abs(position.y1 - (y + 0.5));
+            let distance2 = Math.abs(position.y1 - y);//+ 0.5
             let porcentaje = distance2 / distance;
             let lol =  Math.abs(position.z1 - position.z2);
             let z = position.z1 - (lol * porcentaje);
+            console.log(y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
+
             return -z;
-            //console.log(ballPosition.y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
+            //return -position.z1;
         }
 	}
 }
@@ -412,4 +460,3 @@ function setDefaults(to, from) {
 
 	return to;
 }
-*/

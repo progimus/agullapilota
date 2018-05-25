@@ -283,8 +283,8 @@ function Flipper(world, def) {
 		bullet: true
 	});
 
-	this.body.createFixture(pl.Circle(1), def.mass);
 	this.createFixture(this.body, def);
+	this.body.createFixture(pl.Circle(1), def.mass);
 
 	this.orientation = def.orientation;
 	this.velocity = { down: def.velocity.down, up: def.velocity.up };

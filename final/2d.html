@@ -1,8 +1,29 @@
 <html>
 <head>
     <meta charset="utf-8">
+    <script src="../libs/planck-with-testbed.js"></script>
+    <script src="./public/levels/multiplayer/level1/physics.js"></script>
+    <script src="pinball.js"></script>
     <script>
-        
+        planck.testbed("Pinball", function(testbed) {
+            var pinball = new Pinball(physics);
+
+            testbed.step = function() {
+                pinball.update()
+            }
+
+            document.body.addEventListener('keydown', evt => {
+                if(evt.keyCode == 37) pinball.updateFlipper({ active: true, id: 'p1leftFlipper' });
+                if(evt.keyCode == 39) pinball.updateFlipper({ active: true, id: 'p1rightFlipper' });
+            });
+
+            document.body.addEventListener('keyup', evt => {
+                if(evt.keyCode == 37) pinball.updateFlipper({ active: false, id: 'p1leftFlipper' });
+                if(evt.keyCode == 39) pinball.updateFlipper({ active: false, id: 'p1rightFlipper' });
+            });
+
+            return pinball.world;
+        });
     </script>
 </head>
 <body>

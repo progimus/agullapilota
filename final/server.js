@@ -12,6 +12,10 @@ app.get('/', (req, res) => {
     res.render('index');
 });
 
+app.get('/singleplayer', (req, res) => {
+    res.render('singleplayer.ejs', { elementsUrl: 'levels/singleplayer/level1/elements.js' });
+});
+
 app.get('/multiplayer', (req, res) => {
     res.render('multiplayer', { elementsUrl: 'levels/multiplayer/level1/elements.js' });
 });
@@ -25,7 +29,6 @@ io.on('connection', socket => {
         var pinball = new Pinball(physics);
 
         socket.on('flipper', function(data) {
-            console.log(data);
             pinball.updateFlipper(data);
         });
 
@@ -33,7 +36,7 @@ io.on('connection', socket => {
             setInterval(() => {
                 var data = pinball.update();
                 io.emit('update', data);
-            }, 1000 / 60);
+            }, 1000 / 100);
         }
 
         start();
