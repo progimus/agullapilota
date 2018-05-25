@@ -72,7 +72,8 @@ function setDefaults(to, from) {
 
 function Scene(domElement, def) {
     this.scene = new THREE.Scene();
-    this.camera = 'camera1';
+
+	this.player = null;
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -96,24 +97,33 @@ function Scene(domElement, def) {
         if(evt.keyCode == 39) socket.emit('flipper', { active: false, id: 'rightFlipper' });
     });
 
-    window.addEventListener('resize', () => {
+	/*window.addEventListener('resize', () => {
         Object.values(this.cameras).forEach(camera => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
         });
 
         this.renderer.setSize(window.innerWidth / window.innerHeight);
-    });
+    });*/
 }
 
 Scene.prototype.start = function() {
     //this.update();
-	this.renderer.render(this.scene, this.cameras[this.camera]);
+	var player = this.player,
+		camera = Object.values(this.cameras)
+			.find(camera => camera);
+	//console.log(this.player)
+
+	this.renderer.render(this.scene, camera);
 	requestAnimationFrame(() => this.start());
 }
 
 Scene.prototype.update = function() {
 
+}
+
+Scene.prototype.setPlayer = function(player) {
+	this.player = player;
 }
 
 Scene.prototype.createCamera = function(id, def) {
@@ -122,6 +132,7 @@ Scene.prototype.createCamera = function(id, def) {
     var camera = cameraTypes[def.type](def);
     camera.position.set(...Object.values(def.position));
     camera.lookAt(...Object.values(def.lookAt));
+	camera.userData.owner = def.owner;
     this.cameras[id] = camera;
 }
 

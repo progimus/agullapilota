@@ -1,0 +1,28 @@
+{
+    "cameras": {
+        "camera1": {
+            "fov": 30,
+            "position": { "x": 0, "y": -125, "z": 90 },
+            "owner": "player1"
+        },
+        "camera2": {
+            "fov": 30,
+            "position": { "x": 0, "y": -125, "z": 90 },
+            "owner": "player2"
+        }
+    },
+    "lights": {
+        "light1": {},
+        "light2": {
+            "type": "DirectionalLight",
+            "position": { "x": 42.5, "y": -160, "z": 100 },
+            "lookAt": { "x": 42.5, "y": 132, "z": 0 }
+        }
+    },
+    "objects3D": {
+        "ball1": "models/ball.dae",
+        "p1leftFlipper": "models/flipperLeft.dae",
+        "p1rightFlipper": "models/flipperRight.dae",
+        "stage1": "models/multiplayer.dae"
+    }
+}

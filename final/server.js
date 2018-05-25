@@ -4,7 +4,7 @@ const express = require('express'),
     io = require('socket.io')(http),
     fs = require('fs'),
     Pinball = require('./pinball.js'),
-    physics = require('./public/levels/multiplayer/level1/physics.js');
+    Game = require('./Game.js');
 
 app.set('view engine', 'ejs');
 app.use(express.static(__dirname + '/public'));
@@ -23,48 +23,89 @@ app.get('/user', (req, res) => {
     res.json({ username: 'player1' });
 });
 
-app.get('/singleplayer', (req, res) => {
-    console.log('singleplayer')
-    res.render('singleplayer.ejs', { elementsUrl: 'levels/singleplayer/level1/scene.js' });
-});
-
-app.get('/multiplayer', (req, res) => {
-    res.render('multiplayer', { elementsUrl: 'levels/multiplayer/level1/scene.js' });
-});
-
 var games = {
-    singleplayer: {},
-    multiplayer: {}
-}
+    waiting: {},
+    playing: {}
+};
 
 io.on('connection', socket => {
     console.log('User connected');
 
-    socket.on('createGame', data => {
-        var gameType = data.type ? data.type : 'singleplayer',
-            roomId = Math.random().toString(36).slice(2);
+    socket.on('playGame', data => {
+        if(data.level.type == 'singleplayer') {
+            var game = createGame(id, data);
+            game.addPlayer(socket.id, data.user.username);
 
-        socket.join(roomId);
-        games[gameType][roomId] = new Pinball(physics);
+            var id = Math.random().toString(36).slice(2);
+            socket.join(id);
+            socket.gameId = id;
+            games.playing[id] = game;
 
-        var sceneDef = require('./public/levels/' + gameType + '/level1/scene.json');
-        socket.emit('loadScene', sceneDef);
+            startGame(game, data);
+        } else {
+            if(games.waiting.length) {
+                var game = games.waiting[0],
+                    id = game.getId();
+
+                socket.join(id);
+                game.addPlayer(data.user.username);
+                if(game.nPlayers == game.maxPlayers) {
+                    delete games[id];
+                    startGame(game, data);
+                }
+            } else {
+                var game = createGame(id, data);
+                game.addPlayer(socket.id, data.user.username);
+
+                var id = Math.random().toString(36).slice(2);
+                socket.join(id);
+                socket.gameId = id;
+                games.waiting[id] = game;
+            }
+        }
+        console.log(games)
     });
-    /*var pinball = new Pinball(physics);
-
-    socket.on('flipper', function(data) {
-        pinball.updateFlipper(data);
-    });
-
-    var start = () => {
-        setInterval(() => {
-            var data = pinball.update();
-            io.emit('update', data);
-        }, 1000 / 100);
-    }
-
-    start();*/
+    socket.on('disconnect', leaveGame);
+    socket.on('leaveGame', leaveGame);
 });
+
+function createGame(id, data) {
+    var levelDef = require('./public/levels/' + data.level.name + '/physics.js'),
+        game = new Game(id, levelDef);
+    return game;
+}
+
+function startGame(game, data) {
+    console.log('Starting game')
+    var sceneDef = require('./public/levels/' + data.level.name + '/scene.json');
+    io.sockets.in(game.getId()).emit('loadScene', sceneDef);
+}
+
+function leaveGame() {
+    var waitingGames = Object.values(games.waiting),
+        playingGames = Object.values(games.playing),
+        allGames = waitingGames.concat(playingGames);
+
+    var id = allGames.find(game => game.getPlayers().toArray)
+}
+
+function getGameIndex(id, state) {
+    games[state].findIndex()
+}
+
+var start = () => {
+    setInterval(() => {
+        Object.entries(games.singleplayer)
+            .concat(Object.entries(games.multiplayer))
+            .forEach(game => {
+                console.log(game);
+                io.sockets.in(game[0])
+                    .emit('update', game[1].update());
+            });
+    }, 1000 / 100);
+}
+
+//start();
 
 //Server
 http.listen(3000, function(){

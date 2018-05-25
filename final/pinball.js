@@ -7,6 +7,7 @@ module.exports = Pinball;
 //    Vec2 = pl.Vec2;
 
 function Pinball(def) {
+
     this.world = new pl.World(Vec2(def.world.gravity.x, def.world.gravity.y));
 
     this.physics = {
@@ -38,8 +39,6 @@ Pinball.prototype.update = function() {
 			inside = ball.getInside(),
 			insideObject = this.physics[inside.type][inside.id],
 			insideObjectZ = insideObject.getZ(ball.getY());
-        console.log(insideObjectZ);
-        if(inside.type == 'ramp') console.log(insideObjectZ);
 
 		ball.setZ(inside.type == 'stage' &&
             ballZ > insideObjectZ &&
@@ -431,23 +430,18 @@ Ramp.prototype.createHeightMap = function(def) {
 	}
 
     this.heightMap = this.heightMap.sort((a, b) => a.y1 - b.y1);
-    //this.heightMap.forEach(e => console.log(e.y1, e.z1, e.z2))
-    //console.log();
 }
 
 Ramp.prototype.getZ = function(y) {
 	for(position of this.heightMap) {
-        //console.log(position.y1, y, position.y2)
         if(position.y1 < y && position.y2 > y) {
             let distance = Math.abs(position.y2 - position.y1);
             let distance2 = Math.abs(position.y1 - y);//+ 0.5
             let porcentaje = distance2 / distance;
             let lol =  Math.abs(position.z1 - position.z2);
             let z = position.z1 - (lol * porcentaje);
-            console.log(y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
 
             return -z;
-            //return -position.z1;
         }
 	}
 }
