@@ -12,10 +12,8 @@ var elements = {
     },
     objects3D: {
         ball1: 'models/ball.dae',
-        p1leftFlipper: 'models/mFlipperLeft.dae',
-        p1rightFlipper: 'models/mFlipperRight.dae',
-        p2leftFlipper: 'models/mFlipperLeft.dae',
-        p2rightFlipper: 'models/mFlipperRight.dae',
-        stage1: 'models/multiplayer.dae'
+        p1leftFlipper: 'models/flipperLeft.dae',
+        p1rightFlipper: 'models/flipperRight.dae',
+        stage1: 'models/supreme.dae'
     }
 }
