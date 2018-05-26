@@ -1,3 +1,16 @@
+const cameraTypes = {
+	PerspectiveCamera: function(def) { return new THREE.PerspectiveCamera(def.fov, def.aspect, def.near, def.far); }
+}
+
+const cameraDef = {
+	type: 'PerspectiveCamera',
+	fov: 45,
+	aspect: window.innerWidth / window.innerHeight,
+	near: 1,
+	far: 1000,
+	position: { x: 0, y: 0, z: 0 },
+	lookAt: { x: 0, y: 0, z: 0 }
+};
 const lightTypes = {
 	AmbientLight: function(def) { return new THREE.AmbientLight(def.color, def.intensity); },
 	DirectionalLight: function(def) { return new THREE.DirectionalLight(def.color, def.intensity); },
@@ -21,47 +34,6 @@ const lightDef = {
 	lookAt: { x: 0, y: 0, z: 0 }
 }
 
-const cameraTypes = {
-	PerspectiveCamera: function(def) { return new THREE.PerspectiveCamera(def.fov, def.aspect, def.near, def.far); }
-}
-
-const cameraDef = {
-    type: 'PerspectiveCamera',
-	fov: 45,
-	aspect: window.innerWidth / window.innerHeight,
-	near: 1,
-	far: 1000,
-	position: [0, 0, 0],
-	lookAt: [0, 0, 0],
-};
-
-function loadLevel() {
-    var socket = io();
-
-    socket.on('update', data => {
-        Object.entries(data)
-            .forEach(e => {
-                var id = e[0],
-                    def = e[1];
-
-                var obj = scene.children.find(e => e.name == id);
-
-                if(def.p) obj.position.set(...Object.values(def.p));
-                if(def.a) obj.rotation.z = def.a;
-            });
-    });
-
-    document.body.addEventListener('keydown', evt => {
-        if(evt.keyCode == 37) socket.emit('flipper', { active: true, id: 'leftFlipper' });
-        if(evt.keyCode == 39) socket.emit('flipper', { active: true, id: 'rightFlipper' });
-    });
-
-    document.body.addEventListener('keyup', evt => {
-        if(evt.keyCode == 37) socket.emit('flipper', { active: false, id: 'leftFlipper' });
-        if(evt.keyCode == 39) socket.emit('flipper', { active: false, id: 'rightFlipper' });
-    });
-}
-
 function setDefaults(to, from) {
 	to = to || {};
 
@@ -70,10 +42,11 @@ function setDefaults(to, from) {
 	return to;
 }
 
-function Scene(domElement, def) {
+function Scene(playerId, players, domElement, def) {
+	console.log(def);
     this.scene = new THREE.Scene();
 
-	this.player = null;
+	this.player = Object.values(players).find(player => player.id == playerId)
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
@@ -86,44 +59,25 @@ function Scene(domElement, def) {
     Object.entries(def.cameras).forEach(camera => this.createCamera(...camera));
     Object.entries(def.lights).forEach(light => this.createLight(...light));
     Object.entries(def.objects3D).forEach(object3D => this.createObject3D(...object3D));
-
-    document.body.addEventListener('keydown', evt => {
-        if(evt.keyCode == 37) socket.emit('flipper', { active: true, id: 'leftFlipper' });
-        if(evt.keyCode == 39) socket.emit('flipper', { active: true, id: 'rightFlipper' });
-    });
-
-    document.body.addEventListener('keyup', evt => {
-        if(evt.keyCode == 37) socket.emit('flipper', { active: false, id: 'leftFlipper' });
-        if(evt.keyCode == 39) socket.emit('flipper', { active: false, id: 'rightFlipper' });
-    });
-
-	/*window.addEventListener('resize', () => {
-        Object.values(this.cameras).forEach(camera => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-        });
-
-        this.renderer.setSize(window.innerWidth / window.innerHeight);
-    });*/
 }
 
 Scene.prototype.start = function() {
-    //this.update();
-	var player = this.player,
-		camera = Object.values(this.cameras)
-			.find(camera => camera);
-	//console.log(this.player)
-
-	this.renderer.render(this.scene, camera);
+	this.renderer.render(this.scene, this.cameras[this.player.camera]);
 	requestAnimationFrame(() => this.start());
 }
 
-Scene.prototype.update = function() {
+Scene.prototype.update = function(data) {
+    Object.entries(data).forEach(e => {
+        var id = e[0],
+            def = e[1];
 
-}
+        var obj = this.scene.children.find(e => e.name == id);
 
-Scene.prototype.setPlayer = function(player) {
-	this.player = player;
+		if(obj) {
+            if(def.p) obj.position.set(...Object.values(def.p));
+            if(def.a) obj.rotation.z = def.a;
+		}
+    });
 }
 
 Scene.prototype.createCamera = function(id, def) {

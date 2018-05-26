@@ -3,7 +3,6 @@ var socket = io(),
     scene;
 
 window.onload = () => {
-
     $.ajax({
         url: '/user',
         type: 'GET',
@@ -15,21 +14,24 @@ window.onload = () => {
 
     var playSingleplayerBtn = document.getElementById('playSingleplayerBtn'),
         playMultiplayerBtn = document.getElementById('playMultiplayerBtn');
-
     playSingleplayerBtn.addEventListener('click', playSingleplayer);
     playMultiplayerBtn.addEventListener('click', playMultiplayer);
 
-    socket.on('loadScene', data => {
-        scene = new Scene(document.body, data);
-		//scene.setPlayer(data.player);
-		scene.start()
+    socket.on('loadScene', loadScene);
+    socket.on('updateScene', updateScene);
+	socket.on('playerDisconnects', playerDisconnects);
+
+    document.body.addEventListener('keydown', evt => {
+        if(evt.keyCode == 37) socket.emit('updateFlipper', { active: true, side: 'left' });
+        if(evt.keyCode == 39) socket.emit('updateFlipper', { active: true, side: 'right' });
+        if(evt.keyCode == 32) socket.emit('spacePressed', true);
     });
 
-	socket.on('playerDisconnects', () => {
-		console.log('El contrincante se ha desconectado, tu ganas.');
-	});
-
-    //scene.start();
+    document.body.addEventListener('keyup', evt => {
+        if(evt.keyCode == 37) socket.emit('updateFlipper', { active: false, side: 'left' });
+        if(evt.keyCode == 39) socket.emit('updateFlipper', { active: false, side: 'right' });
+        if(evt.keyCode == 32) socket.emit('spacePressed', false);
+    });
 }
 
 function playSingleplayer(evt) {
@@ -52,6 +54,15 @@ function playMultiplayer(evt) {
     });
 }
 
-function loadScene(sceneDef) {
-    console.log(sceneDef);
+function loadScene(data) {
+    scene = new Scene(socket.id, data.players, document.body, data.sceneDef);
+    scene.start()
+}
+
+function updateScene(data) {
+    scene.update(data);
+}
+
+function playerDisconnects() {
+    console.log('El contrincante se ha desconectado, tu ganas.');
 }

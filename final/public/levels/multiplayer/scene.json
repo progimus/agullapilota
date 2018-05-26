@@ -2,13 +2,13 @@
     "cameras": {
         "camera1": {
             "fov": 30,
-            "position": { "x": 0, "y": -125, "z": 90 },
-            "owner": "player1"
+            "position": { "x": 0, "y": -300, "z": 120 },
+            "rotation": { "x": 0, "y": 0, "z": 0 }
         },
         "camera2": {
             "fov": 30,
             "position": { "x": 0, "y": -125, "z": 90 },
-            "owner": "player2"
+            "rotation": { "x": 0, "y": 0, "z": 0 }
         }
     },
     "lights": {
@@ -20,9 +20,11 @@
         }
     },
     "objects3D": {
-        "ball1": "models/ball.dae",
-        "p1leftFlipper": "models/flipperLeft.dae",
-        "p1rightFlipper": "models/flipperRight.dae",
-        "stage1": "models/multiplayer.dae"
+        "ball": "models/multiplayer/ball.dae",
+        "p1leftFlipper": "models/multiplayer/p1LeftFlipper.dae",
+        "p1rightFlipper": "models/multiplayer/p1rightFlipper.dae",
+        "p2leftFlipper": "models/multiplayer/p2LeftFlipper.dae",
+        "p2rightFlipper": "models/multiplayer/p2RightFlipper.dae",
+        "stage": "models/multiplayer/stage.dae"
     }
 }

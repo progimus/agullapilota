@@ -2,27 +2,28 @@
 <head>
     <meta charset="utf-8">
     <script src="../libs/planck-with-testbed.js"></script>
-    <script src="./public/levels/multiplayer/level1/physics.js"></script>
-    <script src="pinball.js"></script>
+    <script src="./public/levels/singleplayer/physics.js"></script>
+    <script src="Game.js"></script>
     <script>
         planck.testbed("Pinball", function(testbed) {
-            var pinball = new Pinball(physics);
+            var game = new Game(1, physics);
+            //console.log(game.world.getBodyList())
 
             testbed.step = function() {
-                pinball.update()
+                game.update()
             }
 
             document.body.addEventListener('keydown', evt => {
-                if(evt.keyCode == 37) pinball.updateFlipper({ active: true, id: 'p1leftFlipper' });
-                if(evt.keyCode == 39) pinball.updateFlipper({ active: true, id: 'p1rightFlipper' });
+                if(evt.keyCode == 37) game.updateFlipper({ active: true, id: 'p1LeftFlipper' });
+                if(evt.keyCode == 39) game.updateFlipper({ active: true, id: 'p1RightFlipper' });
             });
 
             document.body.addEventListener('keyup', evt => {
-                if(evt.keyCode == 37) pinball.updateFlipper({ active: false, id: 'p1leftFlipper' });
-                if(evt.keyCode == 39) pinball.updateFlipper({ active: false, id: 'p1rightFlipper' });
+                if(evt.keyCode == 37) game.updateFlipper({ active: false, id: 'p1LeftFlipper' });
+                if(evt.keyCode == 39) game.updateFlipper({ active: false, id: 'p1RightFlipper' });
             });
 
-            return pinball.world;
+            return game.world;
         });
     </script>
 </head>

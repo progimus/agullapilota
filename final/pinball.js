@@ -1,15 +1,22 @@
-const pl = require('./public/libs/planck'),
+/*const pl = require('./public/libs/planck'),
     Vec2 = pl.Vec2;
 
-module.exports = Pinball;
+module.exports = Pinball;*/
 
-//const pl = planck,
-//    Vec2 = pl.Vec2;
+const pl = planck,
+    Vec2 = pl.Vec2;
 
-function Pinball(def) {
+function Game(id, def) {
+    this.id = id;
+
+    this.nPlayers = 0;
+    this.maxPlayers = def.maxPlayers;
+    this.players = {};
+
+    this.levelName = def.levelName;
+    this.levelType = def.levelType;
 
     this.world = new pl.World(Vec2(def.world.gravity.x, def.world.gravity.y));
-
     this.physics = {
         ball: {},
         flipper: {},
@@ -19,15 +26,33 @@ function Pinball(def) {
         ramp: {},
         gravitySensor: {}
     }
-
     Object.keys(def.physics).forEach(id => {
         var type = def.physics[id].type;
         this.physics[type][id] = Physic.types[type](this.world, def.physics[id]);
     });
 }
 
-Pinball.prototype.update = function() {
-    this.world.step(1 / 25);
+Game.prototype.addPlayer = function(id, username) {
+    console.log('creating player...')
+    this.nPlayers += 1;
+    this.players[id] = {
+        username: username,
+        camera: 'camera' + this.nPlayers,
+        balls: {},
+        flippers: {}
+    };
+}
+
+Game.prototype.getId = function() {
+    return this.id;
+}
+
+Game.prototype.getLevelName = function() {
+    return this.levelName;
+}
+
+Game.prototype.update = function() {
+    //this.world.step(1 / 25);
 
     var res = {}
     var balls = this.physics.ball,
@@ -39,6 +64,8 @@ Pinball.prototype.update = function() {
 			inside = ball.getInside(),
 			insideObject = this.physics[inside.type][inside.id],
 			insideObjectZ = insideObject.getZ(ball.getY());
+        console.log(insideObjectZ);
+        if(inside.type == 'ramp') console.log(insideObjectZ);
 
 		ball.setZ(inside.type == 'stage' &&
             ballZ > insideObjectZ &&
@@ -62,7 +89,7 @@ Pinball.prototype.update = function() {
     return res;
 }
 
-Pinball.prototype.updateFlipper = function(data) {
+Game.prototype.updateFlipper = function(data) {
     this.physics.flipper[data.id].setActive(data.active);
 }
 
@@ -299,31 +326,24 @@ Bouncer.prototype = Object.create(Physic.prototype);
 
 /*function Shuttle(world, def) {
     Physic.call(this, world, def);
-
 	this.createFixture(this.body, def);
 	this.setFilterData({
 		groupIndex: 0,
 		categoryBits: Physic.fylterCategory.shuttle,
 		maskBits: 0xffff
 	});
-
 	this.force = Vec2(...def.force);
-
 	document.body.addEventListener('keyup', evt => {
 		if(evt.keyCode == def.activeKey) this.active = true;
 	});
 }
-
 Shuttle.prototype = Object.create(Physic.prototype);
-
 Shuttle.prototype.getZ = function() {
 	return this.position.z;
 }
-
 Shuttle.prototype.isActive = function() {
 	return this.active;
 }
-
 Shuttle.prototype.getForce = function() {
 	return this.force;
 }*/
@@ -430,18 +450,23 @@ Ramp.prototype.createHeightMap = function(def) {
 	}
 
     this.heightMap = this.heightMap.sort((a, b) => a.y1 - b.y1);
+    //this.heightMap.forEach(e => console.log(e.y1, e.z1, e.z2))
+    //console.log();
 }
 
 Ramp.prototype.getZ = function(y) {
 	for(position of this.heightMap) {
+        //console.log(position.y1, y, position.y2)
         if(position.y1 < y && position.y2 > y) {
             let distance = Math.abs(position.y2 - position.y1);
             let distance2 = Math.abs(position.y1 - y);//+ 0.5
             let porcentaje = distance2 / distance;
             let lol =  Math.abs(position.z1 - position.z2);
             let z = position.z1 - (lol * porcentaje);
+            console.log(y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
 
             return -z;
+            //return -position.z1;
         }
 	}
 }
