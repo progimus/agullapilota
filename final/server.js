@@ -24,7 +24,7 @@ app.get('/user', (req, res) => {
 var games = { waiting: {}, playing: {} };
 
 io.on('connection', socket => {
-    console.log(socket.id);
+    console.log(socket.id)
     socket.on('playGame', data => playGame(socket, data));
     socket.on('updateFlipper', (data) => updateFlipper(socket, data));
     socket.on('spacePressed', (data) => updateShuttle(socket, data));
@@ -33,9 +33,9 @@ io.on('connection', socket => {
 
 });
 
-function createGame(id, data) {
-    var levelDef = require('./public/levels/' + data.name + '/physics.js'),
-        game = new Game(id, levelDef);
+function createGame(id, level) {
+        //console.log(JSON.stringify(require('./public/levels/multiplayer/level.js')));
+        game = new Game(id, level.name);
     return game;
 }
 
@@ -52,7 +52,7 @@ function joinGame(socket, username, game) {
 
 function startGame(game) {
     var sceneDef = require('./public/levels/' + game.getLevelName() + '/scene.json');
-    io.sockets.in(game.getId()).emit('loadScene', {
+    io.to(game.getId()).emit('loadScene', {
         players: game.players,
         sceneDef: sceneDef
     });
@@ -64,19 +64,12 @@ function playGame(socket, data) {
             level = data.level;
         if(level.type == 'singleplayer') {
             var gameId = createGameId(),
-                levelDef = require('./public/levels/' + level.name + '/physics.js'),
-                game = new Game(gameId, levelDef);
-                //game = createGame(gameId, level);
+                game = new Game(gameId, level.name);
 
-            socket.join(gameId);
-            socket.gameId = gameId;
-            game.addPlayer(socket.id, username)
-            //joinGame(socket, username, game);
+            joinGame(socket, username, game);
             games.playing[gameId] = game;
 
             startGame(games.playing[gameId]);
-
-            //Object.values(games.playing).forEach(game => console.log(game.players.player1.id));
         } else {
             if(Object.keys(games.waiting).length) {
                 var gameId = Object.keys(games.waiting)[0],
@@ -99,8 +92,6 @@ function playGame(socket, data) {
 }
 
 function updateFlipper(socket, data) {
-    //Object.values(games.playing).forEach(game => console.log(game.players.player1.id));
-    //console.log('################')
     var game = games.playing[socket.gameId];
     if(game)
         game.updateFlipper(socket.id, data);
@@ -114,6 +105,7 @@ function updateShuttle(socket, data) {
 
 function leaveGame(socket) {
     var gameId = socket.gameId;
+    io.to(gameId).emit('playerDisconnects');
     delete games.waiting[gameId];
     delete games.playing[gameId];
     delete socket.gameId;
@@ -128,8 +120,7 @@ http.listen(3000, function() {
                 game = game[1];
 
             res = game.update();
-            io.sockets.in(gameId)
-                .emit('updateScene', game.update());
+            io.to(gameId).emit('updateScene', game.update());
         });
     }, 1000 / 100);
 });

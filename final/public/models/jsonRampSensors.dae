@@ -4,8 +4,8 @@
         <contributor>
             <authoring_tool>SketchUp 17.2.2555</authoring_tool>
         </contributor>
-        <created>2018-05-26T17:08:44Z</created>
-        <modified>2018-05-26T17:08:44Z</modified>
+        <created>2018-05-27T00:04:44Z</created>
+        <modified>2018-05-27T00:04:44Z</modified>
         <unit meter="0.0254" name="inch" />
         <up_axis>Z_UP</up_axis>
     </asset>
@@ -63,7 +63,7 @@
                     </bind_material>
                 </instance_geometry>
                 <node name="skp_camera_Last_Saved_SketchUp_View">
-                    <matrix>-0.9968997 -0.0008202799 -0.07867835 1114.583 0.07868262 -0.01039285 -0.9968455 -7046.902 8.673617e-19 -0.9999456 0.01042517 5440.392 0 0 0 1</matrix>
+                    <matrix>0.9948429 0.01343808 0.1005338 2404.356 0.1014279 -0.1318056 -0.9860728 -7168.525 0 0.9911845 -0.1324889 4363.413 0 0 0 1</matrix>
                     <instance_camera url="#ID1" />
                 </node>
             </node>
@@ -73,7 +73,7 @@
         <geometry id="ID3">
             <mesh>
                 <source id="ID6">
-                    <float_array id="ID8" count="6">977.1109 -308.1484 3522.153 644.5424 -293.786 3357.989</float_array>
+                    <float_array id="ID8" count="6">1094.339 -295.8437 3376.828 748.0315 -286.4954 3274.657</float_array>
                     <technique_common>
                         <accessor count="2" source="#ID8" stride="3">
                             <param name="X" type="float" />
@@ -94,7 +94,7 @@
         <geometry id="ID9">
             <mesh>
                 <source id="ID10">
-                    <float_array id="ID12" count="6">644.5424 -293.786 7370.001 977.1109 -308.1484 7205.838</float_array>
+                    <float_array id="ID12" count="6">1094.33 -295.4374 7351.125 748.0315 -286.4954 7453.333</float_array>
                     <technique_common>
                         <accessor count="2" source="#ID12" stride="3">
                             <param name="X" type="float" />
@@ -115,7 +115,7 @@
         <geometry id="ID13">
             <mesh>
                 <source id="ID14">
-                    <float_array id="ID16" count="6">2701.828 -293.786 3357.989 2369.26 -308.1484 3522.153</float_array>
+                    <float_array id="ID16" count="6">2598.425 -286.4954 3274.657 2252.127 -295.4374 3376.865</float_array>
                     <technique_common>
                         <accessor count="2" source="#ID16" stride="3">
                             <param name="X" type="float" />
@@ -136,7 +136,7 @@
         <geometry id="ID17">
             <mesh>
                 <source id="ID18">
-                    <float_array id="ID20" count="6">2369.26 -308.1484 7205.838 2701.828 -293.786 7370.001</float_array>
+                    <float_array id="ID20" count="6">2598.425 -286.4954 7453.333 2252.127 -295.4374 7351.125</float_array>
                     <technique_common>
                         <accessor count="2" source="#ID20" stride="3">
                             <param name="X" type="float" />

@@ -13,9 +13,11 @@ window.onload = () => {
     });
 
     var playSingleplayerBtn = document.getElementById('playSingleplayerBtn'),
-        playMultiplayerBtn = document.getElementById('playMultiplayerBtn');
+        playMultiplayerBtn = document.getElementById('playMultiplayerBtn'),
+        exitBtn = document.getElementById('exitBtn');
     playSingleplayerBtn.addEventListener('click', playSingleplayer);
     playMultiplayerBtn.addEventListener('click', playMultiplayer);
+    exitBtn.addEventListener('click', exit);
 
     socket.on('loadScene', loadScene);
     socket.on('updateScene', updateScene);
@@ -54,8 +56,17 @@ function playMultiplayer(evt) {
     });
 }
 
+function exit(evt) {
+    document.getElementById('menuContainer').style.display = 'block';
+    document.getElementById('gameContainer').style.display = 'none';
+    socket.emit('leaveGame');
+}
+
 function loadScene(data) {
-    scene = new Scene(socket.id, data.players, document.body, data.sceneDef);
+    var gameContainer = document.getElementById('gameContainer')
+    document.getElementById('menuContainer').style.display = 'none';
+    gameContainer.style.display = 'block';
+    scene = new Scene(socket.id, data.players, gameContainer, data.sceneDef);
     scene.start()
 }
 

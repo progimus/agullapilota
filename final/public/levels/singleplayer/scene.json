@@ -21,5 +21,13 @@
         "p1leftFlipper": "models/singleplayer/flipperLeft.dae",
         "p1rightFlipper": "models/singleplayer/flipperRight.dae",
         "stage1": "models/singleplayer/stage.dae"
+    },
+    "score": {
+        "width": "150px",
+        "height": "30px",
+        "fontSize": "14pt",
+        "backgroundColor": "pink",
+        "position": "absolute",
+        "top": "0px"
     }
 }

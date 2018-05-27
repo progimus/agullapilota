@@ -9,6 +9,7 @@ const cameraDef = {
 	near: 1,
 	far: 1000,
 	position: { x: 0, y: 0, z: 0 },
+	rotation: 0,
 	lookAt: { x: 0, y: 0, z: 0 }
 };
 const lightTypes = {
@@ -43,14 +44,13 @@ function setDefaults(to, from) {
 }
 
 function Scene(playerId, players, domElement, def) {
-	console.log(def);
     this.scene = new THREE.Scene();
 
-	this.player = Object.values(players).find(player => player.id == playerId)
+	this.player = Object.values(players).find(player => player.id == playerId);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    document.body.appendChild(this.renderer.domElement);
+    domElement.appendChild(this.renderer.domElement);
 
     this.cameras = {};
     this.lights = {};
@@ -86,6 +86,7 @@ Scene.prototype.createCamera = function(id, def) {
     var camera = cameraTypes[def.type](def);
     camera.position.set(...Object.values(def.position));
     camera.lookAt(...Object.values(def.lookAt));
+	camera.rotation.z = def.rotation;
 	camera.userData.owner = def.owner;
     this.cameras[id] = camera;
 }

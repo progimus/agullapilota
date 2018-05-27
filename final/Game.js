@@ -1,12 +1,15 @@
-const pl = require('./public/libs/planck'),
-    Vec2 = pl.Vec2;
+const pl = require('planck-js'),
+    Vec2 = pl.Vec2,
+    fs = require("fs");
 
 module.exports = Game;
 
 /*const pl = planck,
     Vec2 = pl.Vec2;*/
 
-function Game(id, def) {
+function Game(id, name) {
+    var def = JSON.parse(fs.readFileSync('./public/levels/' + name + '/level.json'));
+    //var def = name;
     this.id = id;
 
     this.nPlayers = 0;
@@ -14,13 +17,15 @@ function Game(id, def) {
     this.players = {};
 
     Object.entries(def.players).forEach(player => {
-        this.players[player[0]] = player[1];
+        this.players[player[0]] = new Player(player[1]);
     });
 
     this.levelName = def.levelName;
     this.levelType = def.levelType;
+    this.score = 0;
 
     this.world = new pl.World(Vec2(def.world.gravity.x, def.world.gravity.y));
+
     this.physics = {
         ball: {},
         flipper: {},
@@ -35,6 +40,19 @@ function Game(id, def) {
         var type = def.physics[id].type;
         this.physics[type][id] = Physic.types[type](this.world, def.physics[id]);
     });
+
+    this.world.on('end-contact', contact => {
+        var bodyA = contact.getFixtureA().getBody(),
+            userData = bodyA.getUserData();
+        if(userData)
+            this.score += userData.score || 0;
+    });
+}
+
+function Player(def) {
+    this.balls = def.balls;
+    this.flippers = def.flippers;
+    this.camera = def.camera;
 }
 
 Game.prototype.addPlayer = function(id, username) {
@@ -90,12 +108,17 @@ Game.prototype.update = function() {
         res[id] = { p: flipper.getPosition(), a: flipper.getAngle() };
     });
 
+    if(this.levelType == 'singleplayer')
+        res.score = this.score;
+
     return res;
 }
 
 Game.prototype.updateFlipper = function(playerId, data) {
     var playerKey = Object.keys(this.players).find(key => this.players[key].id == playerId),
         player = this.players[playerKey];
+
+    //player = this.players.player2;
 
     player.flippers[data.side].forEach(flipperId => {
         var flipper = this.physics.flipper[flipperId];
@@ -136,6 +159,7 @@ function Physic(world, def) {
 	});
 
     if(def.points && def.lines) this.createFixture(this.body, def);
+    if(def.score) this.body.setUserData({ score: def.score });
 }
 
 Physic.fylterCategory = {
@@ -145,6 +169,10 @@ Physic.fylterCategory = {
 	'sensor': 0x0008,
 	'shuttle': 0x0010,
 };
+
+Physic.prototype.setPosition = function(position) {
+    this.position = position || { x: 0, y: 0, z: 0 };
+}
 
 Physic.prototype.getPosition = function() {
     return this.position;
@@ -264,7 +292,6 @@ Flipper.prototype = Object.create(Physic.prototype);
 
 Flipper.prototype.update = function() {
     this.body.setFixedRotation(false);
-
     if(this.orientation == 'right') {
         if(this.direction == 'down' ? !this.active : this.active) {
             if(this.motor.getJointAngle() >= this.limits.upper) {
@@ -436,6 +463,7 @@ function Sensor(world, def) {
 				categoryBits: Physic.fylterCategory.ball,
 				maskBits: Physic.fylterCategory.ball | Physic.fylterCategory.sensor | Physic.fylterCategory[ball.getUserData().inside.mask]
 			});
+            console.log(ball.getUserData().inside);
 		}
 	});
 }
@@ -492,10 +520,10 @@ Ramp.prototype.createHeightMap = function(def) {
         let index1 = lines[i] * 3,
 			index2 = lines[i + 1] * 3;
 
-        if(points[index1 + 2] > points[index2 + 2]) {
+        /*if(points[index1 + 2] > points[index2 + 2]) {
             index2 = lines[i] * 3;
             index1 = lines[i + 1] * 3;
-        }
+        }*/
 
 		this.heightMap.push({
             z1: points[index1 + 1],
@@ -505,26 +533,34 @@ Ramp.prototype.createHeightMap = function(def) {
 		});
 	}
 
-    //this.heightMap = this.heightMap.sort((a, b) => a.y1 - b.y1);
+    this.heightMap.forEach(height => {
+        if(height.y1 > height.y2) {
+            [height.y1, height.y2] = [height.y2, height.y1];
+            [height.z1, height.z2] = [height.z2, height.z1];
+        }
+    });
 
-    if(this.heightMap[0].z1 < this.heightMap[0].z2) {
-        this.heightMap.forEach(height => {
+    this.heightMap = this.heightMap.sort((a, b) => a.y1 - b.y1);
+
+    //this.heightMap.forEach(e => console.log("y1: " + e.y1 + ", y2: " + e.y2 + ", z1: " + e.z1 + ", z2: " +  e.z2));
+    //console.log('//////////////////');
+    /*if(this.heightMap[0].z1 < this.heightMap[0].z2) {
+    this.heightMap.forEach(height => {
             [height.z1, height.z2] = [height.z2, height.z1];
         });
-    }
+    }*/
 
     this.min = Math.max(...this.heightMap.map(e => e.z1));
 }
 
 Ramp.prototype.getZ = function(y) {
     for(position of this.heightMap) {
-        //console.log(position.z1, y, position.z2);
         if(position.y1 < y && position.y2 > y) {
             let distanceY = Math.abs(position.y2 - position.y1);
             let subDistanceY = Math.abs(position.z1 > position.z2 ? position.y1 - y : position.y2 - y);//+ 0.5
             let distanceZ =  Math.abs(position.z1 - position.z2);
             let percentage = subDistanceY / distanceY;
-            let z = position.z1 - (distanceZ * percentage);
+            let z = position.z1 > position.z2 ? position.z1 - (distanceZ * percentage) : position.z2 - (distanceZ * percentage);
             //console.log(y + ", " + position.y1 + ", " + position.y2 + "," + porcentaje + "," + z + "," + lol);
             return -z;
         }
