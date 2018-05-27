@@ -55,10 +55,13 @@ function Scene(playerId, players, domElement, def) {
     this.cameras = {};
     this.lights = {};
     this.objects3D = {};
+	this.score = {};
 
     Object.entries(def.cameras).forEach(camera => this.createCamera(...camera));
     Object.entries(def.lights).forEach(light => this.createLight(...light));
     Object.entries(def.objects3D).forEach(object3D => this.createObject3D(...object3D));
+
+	this.createScore(def.score);
 }
 
 Scene.prototype.start = function() {
@@ -78,6 +81,16 @@ Scene.prototype.update = function(data) {
             if(def.a) obj.rotation.z = def.a;
 		}
     });
+
+	var score = document.getElementById('score');
+}
+
+Scene.prototype.resize = function() {
+	Object.values(this.cameras).forEach(camera => {
+		camera.aspect = window.innerWidth / window.innerHeight;
+	    camera.updateProjectionMatrix();
+	});
+    this.renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
 Scene.prototype.createCamera = function(id, def) {
@@ -111,6 +124,15 @@ Scene.prototype.createObject3D = function(id, dae) {
         object3D.add(model.scene);
         this.scene.add(object3D);
     });
+}
+
+Scene.prototype.createScore = function(def) {
+	var div = document.createElement('div');
+	div.classList.add('score');
+	div.id = score;
+
+	var container = document.getElementById('gameContainer');
+    container.insertBefore(div, container.lastElementChild);
 }
 
 Scene.prototype.setDefaults = function(to, from) {

@@ -1,24 +1,58 @@
 const express = require('express'),
+    session = require('express-session'),
+    MongoStore = require('connect-mongo')(session),
+    mongoose = require('mongoose'),
+    bodyParser = require('body-parser'),
+    passport =  require('passport'),
+    passportConfig = require('./config/passport'),
+    MONGO_URL = 'mongodb://127.0.0.1:27017/auth',
+    userController = require('./controllers/user');
     app = express(),
     http = require('http').Server(app),
     io = require('socket.io')(http),
     Game = require('./Game.js');
 
+mongoose.Promise = global.Promise;
+mongoose.connect(MONGO_URL);
+mongoose.connection.on('error', (err) => {
+  throw err;
+  process.exit(1);
+});
+
+app.use(session({
+  secret: 'secret',
+  resave: true,
+  saveUninitialized: true,
+    store: new MongoStore({
+        url: MONGO_URL,
+        autoReconnect: true
+    })
+}));
+
+app.use(passport.initialize());
+app.use(passport.session());
+
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({extended: true}));
+
 app.set('view engine', 'ejs');
 app.use(express.static(__dirname + '/public'));
 
-/*
-app.get(/)
-	if(!loged) res.redirect(/login)
-	else res.render(index)
-*/
+app.post('/singup', userController.postSignup);
+app.post('/login', userController.postLogin);
 
-app.get('/', (req, res) => {
-    res.render('index');
+app.get('/', passportConfig.isAuthenticated, (req, res) => {
+    res.render('index', { username: req.user.username });
 });
 
-app.get('/user', (req, res) => {
-    res.json({ username: 'player1' });
+app.get('/login', (req, res) => {
+    res.render('login');
+})
+
+app.get('/logout', userController.logout);
+
+app.get('/user', passportConfig.isAuthenticated, (req, res) => {
+    res.json(req.user);
 });
 
 var games = { waiting: {}, playing: {} };
@@ -33,12 +67,6 @@ io.on('connection', socket => {
 
 });
 
-function createGame(id, level) {
-        //console.log(JSON.stringify(require('./public/levels/multiplayer/level.js')));
-        game = new Game(id, level.name);
-    return game;
-}
-
 function createGameId() {
     return Math.random().toString(36).slice(2);
 }
@@ -52,6 +80,7 @@ function joinGame(socket, username, game) {
 
 function startGame(game) {
     var sceneDef = require('./public/levels/' + game.getLevelName() + '/scene.json');
+    console.log(sceneDef);
     io.to(game.getId()).emit('loadScene', {
         players: game.players,
         sceneDef: sceneDef
@@ -82,7 +111,7 @@ function playGame(socket, data) {
                 }
             } else {
                 var gameId = createGameId(),
-                    game = createGame(gameId, level);
+                    game = new Game(gameId, level.name);
                 joinGame(socket, username, game);
 
                 games.waiting[gameId] = game;
@@ -105,10 +134,11 @@ function updateShuttle(socket, data) {
 
 function leaveGame(socket) {
     var gameId = socket.gameId;
-    io.to(gameId).emit('playerDisconnects');
     delete games.waiting[gameId];
     delete games.playing[gameId];
     delete socket.gameId;
+    socket.leave(gameId);
+    io.to(gameId).emit('playerDisconnects', 'El rival se ha desconectado has ganado');
 }
 
 //Server

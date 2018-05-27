@@ -4,9 +4,7 @@
   "levelName": "multiplayer",
   "players": {
     "player1": {
-      "balls": [
-        "ball1"
-      ],
+      "lives": 3,
       "flippers": {
         "left": [
           "p1LeftFlipper"
@@ -18,9 +16,7 @@
       "camera": "camera1"
     },
     "player2": {
-      "balls": [
-        "ball1"
-      ],
+      "lives": 3,
       "flippers": {
         "left": [
           "p2LeftFlipper"
@@ -55,6 +51,22 @@
       "gravityScale": -1,
       "mass": 1
     },
+      "ball2": {
+        "type": "ball",
+        "position": {
+          "x": 40,
+          "y": 70,
+          "z": 0
+        },
+        "radius": 2,
+        "inside": {
+          "mask": "stage",
+          "type": "ramp",
+          "id": "stage1"
+        },
+        "gravityScale": 1,
+        "mass": 1
+      },
     "stage1": {
       "type": "ramp",
       "points": [
@@ -5588,6 +5600,16 @@
         "lower": -0.5,
         "upper": 0.5
       }
-    }
+  },
+  "p1LiveSensor": {
+      "type": "liveSensor",
+      "owner": "player1",
+      "points":[58.014055343550226,-0.47935665866058685,5.479071924669698,26.98594973644961,-0.47935665866058685,5.479071924669698],"lines":[1,0]
+  },
+  "p2LiveSensor": {
+      "type": "liveSensor",
+      "owner": "player1",
+      "points":[58.01334414357298,-0.47952252065527934,267.0098714556841,26.98663553642766,-0.47952252065527934,267.0098714556841],"lines":[1,0]
+  }
   }
 }

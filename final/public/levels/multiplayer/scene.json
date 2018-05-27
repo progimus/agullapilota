@@ -24,10 +24,16 @@
     },
     "objects3D": {
         "ball1": "models/multiplayer/ball.dae",
+        "ball2": "models/multiplayer/ball.dae",
         "p1LeftFlipper": "models/multiplayer/p1LeftFlipper.dae",
         "p1RightFlipper": "models/multiplayer/p1rightFlipper.dae",
         "p2LeftFlipper": "models/multiplayer/p2LeftFlipper.dae",
         "p2RightFlipper": "models/multiplayer/p2RightFlipper.dae",
         "stage": "models/multiplayer/stage.dae"
+    },
+    "score": {
+        "type": "singleplayer",
+        "background": "",
+        "color": ""
     }
 }

@@ -23,11 +23,8 @@
         "stage1": "models/singleplayer/stage.dae"
     },
     "score": {
-        "width": "150px",
-        "height": "30px",
-        "fontSize": "14pt",
-        "backgroundColor": "pink",
-        "position": "absolute",
-        "top": "0px"
+        "type": "singleplayer",
+        "background": "",
+        "color": ""
     }
 }

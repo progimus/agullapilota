@@ -34,7 +34,8 @@ function Game(id, name) {
         sensor: {},
         ramp: {},
         shuttle: {},
-        gravitySensor: {}
+        gravitySensor: {},
+        liveSensor: {}
     }
     Object.keys(def.physics).forEach(id => {
         var type = def.physics[id].type;
@@ -44,8 +45,10 @@ function Game(id, name) {
     this.world.on('end-contact', contact => {
         var bodyA = contact.getFixtureA().getBody(),
             userData = bodyA.getUserData();
-        if(userData)
+        if(userData && userData.score)
             this.score += userData.score || 0;
+        if(userData && userData.owner)
+            this.players[userData.owner].lives -= 1;
     });
 }
 
@@ -108,6 +111,11 @@ Game.prototype.update = function() {
         res[id] = { p: flipper.getPosition(), a: flipper.getAngle() };
     });
 
+    res.lives = {};
+    Object.entries(this.players).forEach(player => {
+        res.lives[player[0]] = player[1].lives;
+    });
+
     if(this.levelType == 'singleplayer')
         res.score = this.score;
 
@@ -147,7 +155,8 @@ Physic.types = {
     shuttle: function(world, def) { return new Shuttle(world, def); },
     sensor: function(world, def) { return new Sensor(world, def); },
     ramp: function(world, def) { return new Ramp(world, def); },
-    gravitySensor: function(world, def) { return new GravitySensor(world, def); }
+    gravitySensor: function(world, def) { return new GravitySensor(world, def); },
+    liveSensor: function(world, def) { return new LiveSensor(world, def); }
 }
 
 function Physic(world, def) {
@@ -567,6 +576,20 @@ Ramp.prototype.getZ = function(y) {
     }
     return this.min;
 }
+
+function LiveSensor(world, def) {
+    Physic.call(this, world, def);
+    this.type = 'liveSensor';
+
+    this.createFixture(this.body, def);
+
+    this.setSensor(true);
+    this.body.setUserData({ owner: def.owner });
+
+    //this.owner = def.owner;
+}
+
+LiveSensor.prototype = Object.create(Physic.prototype);
 
 /////////////////////////////////
 function setDefaults(to, from) {
