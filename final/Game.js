@@ -23,6 +23,8 @@ function Game(id, name) {
     this.levelName = def.levelName;
     this.levelType = def.levelType;
     this.score = 0;
+    this.playerLose = null;
+    this.lose = false;
 
     this.world = new pl.World(Vec2(def.world.gravity.x, def.world.gravity.y));
 
@@ -35,7 +37,7 @@ function Game(id, name) {
         ramp: {},
         shuttle: {},
         gravitySensor: {},
-        liveSensor: {}
+        lifeSensor: {}
     }
     Object.keys(def.physics).forEach(id => {
         var type = def.physics[id].type;
@@ -47,8 +49,12 @@ function Game(id, name) {
             userData = bodyA.getUserData();
         if(userData && userData.score)
             this.score += userData.score || 0;
-        if(userData && userData.owner)
-            this.players[userData.owner].lives -= 1;
+        if(userData && userData.type && userData.type == 'lifeSensor') {
+            if(userData.owner) {
+                this.playerLose  = this.players[userData.owner].id;
+            }
+            this.lose = true;
+        }
     });
 }
 
@@ -111,10 +117,8 @@ Game.prototype.update = function() {
         res[id] = { p: flipper.getPosition(), a: flipper.getAngle() };
     });
 
-    res.lives = {};
-    Object.entries(this.players).forEach(player => {
-        res.lives[player[0]] = player[1].lives;
-    });
+    res.playerLose = this.playerLose;
+    res.lose = this.lose;
 
     if(this.levelType == 'singleplayer')
         res.score = this.score;
@@ -156,7 +160,7 @@ Physic.types = {
     sensor: function(world, def) { return new Sensor(world, def); },
     ramp: function(world, def) { return new Ramp(world, def); },
     gravitySensor: function(world, def) { return new GravitySensor(world, def); },
-    liveSensor: function(world, def) { return new LiveSensor(world, def); }
+    lifeSensor: function(world, def) { return new LifeSensor(world, def); }
 }
 
 function Physic(world, def) {
@@ -577,19 +581,23 @@ Ramp.prototype.getZ = function(y) {
     return this.min;
 }
 
-function LiveSensor(world, def) {
+function LifeSensor(world, def) {
     Physic.call(this, world, def);
-    this.type = 'liveSensor';
+    this.type = 'lifeSensor';
 
     this.createFixture(this.body, def);
-
     this.setSensor(true);
-    this.body.setUserData({ owner: def.owner });
 
-    //this.owner = def.owner;
+    if(def.owner)
+        var userData = { type: 'lifeSensor', owner: def.owner };
+    else
+        var userData = { type: 'lifeSensor'};
+
+    this.body.setUserData(userData);
+    console.log(this.body.getUserData());
 }
 
-LiveSensor.prototype = Object.create(Physic.prototype);
+LifeSensor.prototype = Object.create(Physic.prototype);
 
 /////////////////////////////////
 function setDefaults(to, from) {

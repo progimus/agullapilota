@@ -10,7 +10,8 @@ const express = require('express'),
     app = express(),
     http = require('http').Server(app),
     io = require('socket.io')(http),
-    Game = require('./Game.js');
+    Game = require('./Game.js'),
+    Score = require('./models/Score');
 
 mongoose.Promise = global.Promise;
 mongoose.connect(MONGO_URL);
@@ -55,6 +56,14 @@ app.get('/user', passportConfig.isAuthenticated, (req, res) => {
     res.json(req.user);
 });
 
+app.get('/ranking', (req, res) => {
+    var query = Score.find().select('points username type');
+    query.exec((err, score) => {
+        if(err) return handleError(err);
+        res.json(score);
+    });
+});
+
 var games = { waiting: {}, playing: {} };
 
 io.on('connection', socket => {
@@ -80,7 +89,6 @@ function joinGame(socket, username, game) {
 
 function startGame(game) {
     var sceneDef = require('./public/levels/' + game.getLevelName() + '/scene.json');
-    console.log(sceneDef);
     io.to(game.getId()).emit('loadScene', {
         players: game.players,
         sceneDef: sceneDef
@@ -138,7 +146,7 @@ function leaveGame(socket) {
     delete games.playing[gameId];
     delete socket.gameId;
     socket.leave(gameId);
-    io.to(gameId).emit('playerDisconnects', 'El rival se ha desconectado has ganado');
+    io.to(gameId).emit('playerDisconnects', 'El rival se ha desconectado');
 }
 
 //Server
@@ -150,7 +158,28 @@ http.listen(3000, function() {
                 game = game[1];
 
             res = game.update();
-            io.to(gameId).emit('updateScene', game.update());
+            if(res.lose == true) {
+                if(game.levelType == 'singleplayer') {
+                    var score = new Score({
+                        points: res.score,
+                        username: game.players.player1.username,
+                        type: game.levelType
+                    });
+                    score.save(err => {
+                        if(err)
+                            console.error(error);
+                    });
+                    io.to(gameId).emit('gameOver', 'Has perdido, tu puntuacion es ' + res.score);
+                } else {
+                    Object.values(game.players).forEach(player => {
+                        io.sockets.connected[player.id].emit('gameOver', player.id == game.playerLose ? 'Has perdido...' : 'Has ganado!!!');
+                    });
+                }
+                delete games.playing[gameId];
+            } else {
+                io.to(gameId).emit('updateScene', res);
+            }
+
         });
     }, 1000 / 100);
 });

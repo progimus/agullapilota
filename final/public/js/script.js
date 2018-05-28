@@ -14,15 +14,18 @@ window.onload = () => {
 
     var playSingleplayerBtn = document.getElementById('playSingleplayerBtn'),
         playMultiplayerBtn = document.getElementById('playMultiplayerBtn'),
+        showRankingBtn = document.getElementById('showRankingBtn'),
         exitBtn = document.getElementById('exitBtn');
 
     playSingleplayerBtn.addEventListener('click', playSingleplayer);
     playMultiplayerBtn.addEventListener('click', playMultiplayer);
+    showRankingBtn.addEventListener('click', showRanking);
     exitBtn.addEventListener('click', exit);
 
     socket.on('loadScene', loadScene);
     socket.on('updateScene', updateScene);
 	socket.on('playerDisconnects', playerDisconnects);
+    socket.on('gameOver', gameOver);
 
     document.body.addEventListener('keydown', evt => {
         if(evt.keyCode == 37) socket.emit('updateFlipper', { active: true, side: 'left' });
@@ -75,6 +78,80 @@ function playMultiplayer(evt) {
     }
 }
 
+function showRanking(evt) {
+    multiplayerBtn = document.getElementById('playMultiplayerBtn');
+    if(multiplayerBtn != 'Multiplayer') {
+        multiplayerBtn.classList.remove('selected');
+        multiplayerBtn.textContent = 'Multiplayer';
+        exit();
+    }
+    var menuContainer = document.getElementById('menuContainer'),
+        rankingContainer = document.getElementById('rankingContainer');
+
+    [...rankingContainer.children].slice(1)
+        .forEach(e => rankingContainer.removeChild(e));
+
+    menuContainer.style.display = 'none';
+    rankingContainer.style.display = 'block';
+
+    $.ajax({
+        url: '/ranking',
+        type: 'GET',
+        async: false,
+        success: function(data) {
+            var data = Object.values(data);
+            var table = document.createElement('table');
+                console.log(data);
+                scores = data.sort((a, b) => b.points - a.points).slice(0, 9);
+                console.log(data);
+                headers = ['Score', 'User'];
+
+            var tr = document.createElement('tr');
+            headers.forEach(e => {
+                var th = document.createElement('th');
+
+                th.textContent = e;
+                tr.appendChild(th);
+            });
+
+            table.appendChild(tr);
+
+            var loadRanking = (table, scores) => {
+                scores.forEach(e => {
+                    var tr = document.createElement('tr'),
+                        tdScore = document.createElement('td'),
+                        tdUsername = document.createElement('td');
+
+                    tdScore.textContent = e.points;
+                    tdUsername.textContent = e.username;
+                    tr.appendChild(tdScore);
+                    tr.appendChild(tdUsername);
+                    table.appendChild(tr);
+                });
+            }
+
+            loadRanking(table, scores);
+
+            var h2 = document.createElement('h2');
+
+            h2.textContent = 'Ranking';
+
+            table.style.marginBottom = '20px';
+            rankingContainer.appendChild(h2);
+            rankingContainer.appendChild(table);
+
+            var link = document.createElement('a');
+            link.textContent = 'Volver';
+            link.addEventListener('click', () => {
+                menuContainer.style.display = 'block';
+                rankingContainer.style.display = 'none';
+            });
+
+            rankingContainer.appendChild(link);
+        }
+    });
+}
+
 function exit() {
     closeGame();
     socket.emit('leaveGame');
@@ -105,7 +182,6 @@ function playerDisconnects(message) {
     div.textContent = message;
     div.style.display = 'block';
     div.appendChild(br);
-    link.href = '#';
     link.textContent = 'Continuar';
     link.addEventListener('click', exit);
     div.appendChild(link);
@@ -122,4 +198,21 @@ function closeGame() {
     [...gameContainer.children]
         .filter(e => e.id != 'exitBtn')
         .forEach(e => e.parentNode.removeChild(e));
+}
+
+function gameOver(message) {
+    var div = document.createElement('div'),
+        br = document.createElement('br'),
+        link = document.createElement('a');
+
+    div.classList.add('messageDiv')
+    div.textContent = message;
+    div.style.display = 'block';
+    div.appendChild(br);
+    link.textContent = 'Continuar';
+    link.addEventListener('click', exit);
+    div.appendChild(link);
+
+    var container = document.getElementById('gameContainer');
+    container.insertBefore(div, container.lastElementChild);
 }

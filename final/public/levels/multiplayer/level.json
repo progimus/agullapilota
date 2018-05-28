@@ -4,7 +4,6 @@
   "levelName": "multiplayer",
   "players": {
     "player1": {
-      "lives": 3,
       "flippers": {
         "left": [
           "p1LeftFlipper"
@@ -16,7 +15,6 @@
       "camera": "camera1"
     },
     "player2": {
-      "lives": 3,
       "flippers": {
         "left": [
           "p2LeftFlipper"
@@ -3783,7 +3781,7 @@
       }
     },
     "bouncer2": {
-      "type": "bouncer",
+      "type": "stage",
       "points": [
         63.48297996854463,
         -4.2998388624051564,
@@ -3819,11 +3817,7 @@
         4,
         7,
         6
-      ],
-      "bouncing": {
-        "min": 8,
-        "max": 15
-      }
+      ]
     },
     "leftRampSensors": {
       "type": "sensor",
@@ -5601,14 +5595,14 @@
         "upper": 0.5
       }
   },
-  "p1LiveSensor": {
-      "type": "liveSensor",
+  "p1LifeSensor": {
+      "type": "lifeSensor",
       "owner": "player1",
       "points":[58.014055343550226,-0.47935665866058685,5.479071924669698,26.98594973644961,-0.47935665866058685,5.479071924669698],"lines":[1,0]
   },
-  "p2LiveSensor": {
-      "type": "liveSensor",
-      "owner": "player1",
+  "p2LifeSensor": {
+      "type": "lifeSensor",
+      "owner": "player2",
       "points":[58.01334414357298,-0.47952252065527934,267.0098714556841,26.98663553642766,-0.47952252065527934,267.0098714556841],"lines":[1,0]
   }
   }

@@ -83,6 +83,7 @@ Scene.prototype.update = function(data) {
     });
 
 	var score = document.getElementById('score');
+	score.textContent = data.score;
 }
 
 Scene.prototype.resize = function() {
@@ -127,12 +128,13 @@ Scene.prototype.createObject3D = function(id, dae) {
 }
 
 Scene.prototype.createScore = function(def) {
-	var div = document.createElement('div');
-	div.classList.add('score');
-	div.id = score;
+	var divScore = document.createElement('div');
+	divScore.classList.add('score');
+	divScore.id = "score";
 
 	var container = document.getElementById('gameContainer');
-    container.insertBefore(div, container.lastElementChild);
+    container.insertBefore(divScore, container.lastElementChild);
+
 }
 
 Scene.prototype.setDefaults = function(to, from) {
